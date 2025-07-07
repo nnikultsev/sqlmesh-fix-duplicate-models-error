@@ -8,6 +8,16 @@ import { routeTree } from './routeTree.gen'
 import reportWebVitals from './reportWebVitals.ts'
 import { EventBusProvider } from './hooks/eventBus.tsx'
 
+// Detect panel type and set initial route
+declare global {
+  interface Window {
+    __SQLMESH_PANEL_TYPE__?: string
+  }
+}
+
+const panelType = window.__SQLMESH_PANEL_TYPE__ || 'lineage'
+const initialRoute = panelType === 'tablediff' ? '/tablediff' : '/lineage'
+
 // Create a new router instance
 const router = createRouter({
   routeTree,
@@ -29,6 +39,10 @@ declare module '@tanstack/react-router' {
 const rootElement = document.getElementById('app')
 if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
+
+  // Navigate to the correct initial route based on panel type
+  router.navigate({ to: initialRoute })
+
   root.render(
     <StrictMode>
       <EventBusProvider>

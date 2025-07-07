@@ -15,12 +15,15 @@ from lsprotocol.types import (
 from pygls.server import LanguageServer
 from sqlmesh._version import __version__
 from sqlmesh.core.context import Context
+from sqlmesh.core import constants as c
+from sqlmesh.utils.date import to_timestamp
 from sqlmesh.lsp.api import (
     API_FEATURE,
     ApiRequest,
     ApiResponseGetColumnLineage,
     ApiResponseGetLineage,
     ApiResponseGetModels,
+    ApiResponseGetTableDiff,
 )
 from sqlmesh.lsp.completions import get_sql_completions
 from sqlmesh.lsp.context import (
@@ -33,6 +36,7 @@ from sqlmesh.lsp.custom import (
     RENDER_MODEL_FEATURE,
     SUPPORTED_METHODS_FEATURE,
     FORMAT_PROJECT_FEATURE,
+    GET_ENVIRONMENTS_FEATURE,
     AllModelsRequest,
     AllModelsResponse,
     AllModelsForRenderRequest,
@@ -45,6 +49,9 @@ from sqlmesh.lsp.custom import (
     FormatProjectRequest,
     FormatProjectResponse,
     CustomMethod,
+    GetEnvironmentsRequest,
+    GetEnvironmentsResponse,
+    EnvironmentInfo,
 )
 from sqlmesh.lsp.hints import get_hints
 from sqlmesh.lsp.reference import (
@@ -58,6 +65,7 @@ from sqlmesh.lsp.rename import prepare_rename, rename_symbol, get_document_highl
 from sqlmesh.lsp.uri import URI
 from web.server.api.endpoints.lineage import column_lineage, model_lineage
 from web.server.api.endpoints.models import get_models
+from web.server.api.endpoints.table_diff import get_table_diff
 from typing import Union
 from dataclasses import dataclass
 
@@ -121,6 +129,7 @@ class SQLMeshLanguageServer:
             API_FEATURE: self._custom_api,
             SUPPORTED_METHODS_FEATURE: self._custom_supported_methods,
             FORMAT_PROJECT_FEATURE: self._custom_format_project,
+            GET_ENVIRONMENTS_FEATURE: self._custom_get_environments,
         }
 
         # Register LSP features (e.g., formatting, hover, etc.)
@@ -169,13 +178,67 @@ class SQLMeshLanguageServer:
             ls.log_trace(f"Error formatting project: {e}")
             return FormatProjectResponse()
 
+    def _custom_get_environments(
+        self, ls: LanguageServer, params: GetEnvironmentsRequest
+    ) -> GetEnvironmentsResponse:
+        """Get all environments in the current project."""
+        try:
+            context = self._context_get_or_load()
+            environments = {}
+
+            # Get environments from state
+            for env in context.context.state_reader.get_environments():
+                environments[env.name] = EnvironmentInfo(
+                    name=env.name,
+                    snapshots=[s.fingerprint.to_identifier() for s in env.snapshots],
+                    start_at=str(to_timestamp(env.start_at)),
+                    plan_id=env.plan_id or "",
+                )
+
+            # Add prod if not present (mirroring web/server/api/endpoints/environments.py)
+            if c.PROD not in environments:
+                environments[c.PROD] = EnvironmentInfo(
+                    name=c.PROD,
+                    snapshots=[],
+                    start_at=str(to_timestamp(c.EPOCH)),
+                    plan_id="",
+                )
+
+            # Add default target environment if not present
+            if context.context.config.default_target_environment not in environments:
+                environments[context.context.config.default_target_environment] = EnvironmentInfo(
+                    name=context.context.config.default_target_environment,
+                    snapshots=[],
+                    start_at=str(to_timestamp(c.EPOCH)),
+                    plan_id="",
+                )
+
+            return GetEnvironmentsResponse(
+                environments=environments,
+                pinned_environments=context.context.config.pinned_environments,
+                default_target_environment=context.context.config.default_target_environment,
+            )
+        except Exception as e:
+            ls.log_trace(f"Error getting environments: {e}")
+            return GetEnvironmentsResponse(
+                response_error=str(e),
+                environments={},
+                pinned_environments=set(),
+                default_target_environment="",
+            )
+
     def _custom_api(
         self, ls: LanguageServer, request: ApiRequest
-    ) -> t.Union[ApiResponseGetModels, ApiResponseGetColumnLineage, ApiResponseGetLineage]:
+    ) -> t.Union[
+        ApiResponseGetModels,
+        ApiResponseGetColumnLineage,
+        ApiResponseGetLineage,
+        ApiResponseGetTableDiff,
+    ]:
         ls.log_trace(f"API request: {request}")
         context = self._context_get_or_load()
 
-        parsed_url = urllib.parse.urlparse(request.url)
+        parsed_url = urllib.parse.urlparse(request.endpoint)
         path_parts = parsed_url.path.strip("/").split("/")
 
         if request.method == "GET":
@@ -203,7 +266,24 @@ class SQLMeshLanguageServer:
                     )
                     return ApiResponseGetColumnLineage(data=column_lineage_response)
 
-        raise NotImplementedError(f"API request not implemented: {request.url}")
+            if path_parts[:2] == ["api", "table_diff"]:
+                # /api/table_diff
+                params = request.params
+                table_diff_result = get_table_diff(
+                    source=getattr(params, "source", "") if params else "",
+                    target=getattr(params, "target", "") if params else "",
+                    on=getattr(params, "on", None) if params else None,
+                    model_or_snapshot=getattr(params, "model_or_snapshot", None)
+                    if params
+                    else None,
+                    where=getattr(params, "where", None) if params else None,
+                    temp_schema=getattr(params, "temp_schema", None) if params else None,
+                    limit=getattr(params, "limit", 20) if params else 20,
+                    context=context.context,
+                )
+                return ApiResponseGetTableDiff(data=table_diff_result)
+
+        raise NotImplementedError(f"API request not implemented: {request.endpoint}")
 
     def _custom_supported_methods(
         self, ls: LanguageServer, params: SupportedMethodsRequest

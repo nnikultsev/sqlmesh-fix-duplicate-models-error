@@ -32,6 +32,7 @@ export type CustomLSPMethods =
   | AllModelsForRenderMethod
   | SupportedMethodsMethod
   | FormatProjectMethod
+  | GetEnvironmentsMethod
 
 interface AllModelsRequest {
   textDocument: {
@@ -41,7 +42,19 @@ interface AllModelsRequest {
 
 interface AllModelsResponse extends BaseResponse {
   models: string[]
+  model_completions: ModelCompletion[]
   keywords: string[]
+  macros: MacroCompletion[]
+}
+
+interface ModelCompletion {
+  name: string
+  description?: string
+}
+
+interface MacroCompletion {
+  name: string
+  description?: string
 }
 
 export interface AbstractAPICallRequest {
@@ -110,4 +123,26 @@ interface FormatProjectResponse extends BaseResponse {}
 
 interface BaseResponse {
   response_error?: string
+}
+
+export interface GetEnvironmentsMethod {
+  method: 'sqlmesh/get_environments'
+  request: GetEnvironmentsRequest
+  response: GetEnvironmentsResponse
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface GetEnvironmentsRequest {}
+
+interface GetEnvironmentsResponse extends BaseResponse {
+  environments: Record<string, EnvironmentInfo>
+  pinned_environments: string[]
+  default_target_environment: string
+}
+
+interface EnvironmentInfo {
+  name: string
+  snapshots: string[]
+  start_at: string
+  plan_id: string
 }
