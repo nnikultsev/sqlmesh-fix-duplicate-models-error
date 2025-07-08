@@ -13,6 +13,7 @@ from lsprotocol.types import (
     WorkspaceInlayHintRefreshRequest,
 )
 from pygls.server import LanguageServer
+from sqlglot import exp
 from sqlmesh._version import __version__
 from sqlmesh.core.context import Context
 from sqlmesh.utils.date import to_timestamp
@@ -68,9 +69,11 @@ from sqlmesh.lsp.rename import prepare_rename, rename_symbol, get_document_highl
 from sqlmesh.lsp.uri import URI
 from web.server.api.endpoints.lineage import column_lineage, model_lineage
 from web.server.api.endpoints.models import get_models
-from web.server.api.endpoints.table_diff import get_table_diff
+from web.server.api.endpoints.table_diff import _process_sample_data
 from typing import Union
 from dataclasses import dataclass
+
+from web.server.models import RowDiff, SchemaDiff, TableDiff
 
 
 @dataclass
@@ -275,20 +278,72 @@ class SQLMeshLanguageServer:
                     return ApiResponseGetColumnLineage(data=column_lineage_response)
 
             if path_parts[:2] == ["api", "table_diff"]:
+                import numpy as np
+
                 # /api/table_diff
                 params = request.params
-                table_diff_result = get_table_diff(
-                    source=getattr(params, "source", "") if params else "",
-                    target=getattr(params, "target", "") if params else "",
-                    on=getattr(params, "on", None) if params else None,
-                    model_or_snapshot=getattr(params, "model_or_snapshot", None)
-                    if params
-                    else None,
-                    where=getattr(params, "where", None) if params else None,
-                    temp_schema=getattr(params, "temp_schema", None) if params else None,
-                    limit=getattr(params, "limit", 20) if params else 20,
-                    context=context.context,
-                )
+                table_diff_result: t.Optional[TableDiff] = None
+                if params := request.params:
+                    source = getattr(params, "source", "") if params else ""
+                    target = getattr(params, "target", "") if params else ""
+                    on = getattr(params, "on", None) if params else None
+                    model_or_snapshot = (
+                        getattr(params, "model_or_snapshot", None) if params else None
+                    )
+                    where = getattr(params, "where", None) if params else None
+                    temp_schema = getattr(params, "temp_schema", None) if params else None
+                    limit = getattr(params, "limit", 20) if params else 20
+
+                    table_diffs = context.context.table_diff(
+                        source=source,
+                        target=target,
+                        on=exp.condition(on) if on else None,
+                        select_models={model_or_snapshot} if model_or_snapshot else None,
+                        where=where,
+                        limit=limit,
+                        show=False,
+                    )
+
+                    if table_diffs:
+                        diff = table_diffs[0] if isinstance(table_diffs, list) else table_diffs
+
+                        _schema_diff = diff.schema_diff()
+                        _row_diff = diff.row_diff(temp_schema=temp_schema)
+                        schema_diff = SchemaDiff(
+                            source=_schema_diff.source,
+                            target=_schema_diff.target,
+                            source_schema=_schema_diff.source_schema,
+                            target_schema=_schema_diff.target_schema,
+                            added=_schema_diff.added,
+                            removed=_schema_diff.removed,
+                            modified=_schema_diff.modified,
+                        )
+
+                        # create a readable column-centric sample data structure
+                        processed_sample_data = _process_sample_data(_row_diff, source, target)
+
+                        row_diff = RowDiff(
+                            source=_row_diff.source,
+                            target=_row_diff.target,
+                            stats=_row_diff.stats,
+                            sample=_row_diff.sample.replace({np.nan: None}).to_dict(),
+                            joined_sample=_row_diff.joined_sample.replace({np.nan: None}).to_dict(),
+                            s_sample=_row_diff.s_sample.replace({np.nan: None}).to_dict(),
+                            t_sample=_row_diff.t_sample.replace({np.nan: None}).to_dict(),
+                            column_stats=_row_diff.column_stats.replace({np.nan: None}).to_dict(),
+                            source_count=_row_diff.source_count,
+                            target_count=_row_diff.target_count,
+                            count_pct_change=_row_diff.count_pct_change,
+                            decimals=getattr(_row_diff, "decimals", 3),
+                            processed_sample_data=processed_sample_data,
+                        )
+
+                        s_index, t_index, _ = diff.key_columns
+                        table_diff_result = TableDiff(
+                            schema_diff=schema_diff,
+                            row_diff=row_diff,
+                            on=[(s.name, t.name) for s, t in zip(s_index, t_index)],
+                        )
                 return ApiResponseGetTableDiff(data=table_diff_result)
 
         raise NotImplementedError(f"API request not implemented: {request.endpoint}")

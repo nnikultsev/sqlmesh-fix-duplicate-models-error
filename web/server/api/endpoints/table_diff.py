@@ -27,7 +27,7 @@ def _cells_match(x: t.Any, y: t.Any) -> bool:
 
 def _process_sample_data(
     row_diff: t.Any, source_name: str, target_name: str
-) -> t.Optional[ProcessedSampleData]:
+) -> ProcessedSampleData:
     import pandas as pd
 
     if row_diff.joined_sample.shape[0] == 0:
