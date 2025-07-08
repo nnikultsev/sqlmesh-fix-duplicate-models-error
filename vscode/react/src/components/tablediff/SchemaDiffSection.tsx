@@ -15,7 +15,11 @@ interface SchemaChangeItemProps {
   changeType: 'added' | 'removed' | 'modified'
 }
 
-const SchemaChangeItem = ({ column, type, changeType }: SchemaChangeItemProps) => {
+const SchemaChangeItem = ({
+  column,
+  type,
+  changeType,
+}: SchemaChangeItemProps) => {
   const styleMap = {
     added: {
       bgClass: twColors.bgAdded,
@@ -44,17 +48,23 @@ const SchemaChangeItem = ({ column, type, changeType }: SchemaChangeItemProps) =
       className={twMerge(
         'flex items-center gap-2 text-xs pl-3 py-1 rounded-r',
         bgClass,
-        borderClass
+        borderClass,
       )}
     >
       <span className={twMerge('font-mono font-bold', textClass)}>
         {symbol}
       </span>
-      <span className={twMerge('font-mono truncate', textClass)} title={column}>
+      <span
+        className={twMerge('font-mono truncate', textClass)}
+        title={column}
+      >
         {column}
       </span>
       <span className={twColors.textMuted}>:</span>
-      <span className={twMerge('truncate', textClass)} title={type}>
+      <span
+        className={twMerge('truncate', textClass)}
+        title={type}
+      >
         {type}
       </span>
     </div>
@@ -74,25 +84,29 @@ export function SchemaDiffSection({
     )
   }, [schemaDiff])
 
-  const totalChanges = 
-    Object.keys(schemaDiff.added).length + 
-    Object.keys(schemaDiff.removed).length + 
+  const totalChanges =
+    Object.keys(schemaDiff.added).length +
+    Object.keys(schemaDiff.removed).length +
     Object.keys(schemaDiff.modified).length
 
   return (
     <SectionToggle
       id="schema"
       title="Schema Changes"
-      badge={
-        schemaHasChanges
-          ? `${totalChanges} changes`
-          : 'No changes'
-      }
+      badge={schemaHasChanges ? `${totalChanges} changes` : 'No changes'}
       badgeClassName={twMerge(
         'px-2 py-1 text-xs rounded border',
         schemaHasChanges
-          ? twColors.bgModified + ' ' + twColors.textModified + ' ' + twColors.borderModified
-          : twColors.bgAdded + ' ' + twColors.textAdded + ' ' + twColors.borderAdded
+          ? twColors.bgModified +
+              ' ' +
+              twColors.textModified +
+              ' ' +
+              twColors.borderModified
+          : twColors.bgAdded +
+              ' ' +
+              twColors.textAdded +
+              ' ' +
+              twColors.borderAdded,
       )}
       expanded={expanded}
       onToggle={onToggle}
@@ -105,13 +119,28 @@ export function SchemaDiffSection({
         ) : (
           <>
             {Object.entries(schemaDiff.added).map(([col, type]) => (
-              <SchemaChangeItem key={col} column={col} type={type} changeType="added" />
+              <SchemaChangeItem
+                key={col}
+                column={col}
+                type={type}
+                changeType="added"
+              />
             ))}
             {Object.entries(schemaDiff.removed).map(([col, type]) => (
-              <SchemaChangeItem key={col} column={col} type={type} changeType="removed" />
+              <SchemaChangeItem
+                key={col}
+                column={col}
+                type={type}
+                changeType="removed"
+              />
             ))}
             {Object.entries(schemaDiff.modified).map(([col, type]) => (
-              <SchemaChangeItem key={col} column={col} type={type} changeType="modified" />
+              <SchemaChangeItem
+                key={col}
+                column={col}
+                type={type}
+                changeType="modified"
+              />
             ))}
           </>
         )}

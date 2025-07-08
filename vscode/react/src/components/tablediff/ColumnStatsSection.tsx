@@ -15,7 +15,10 @@ interface StatHeaderProps {
 const StatHeader = ({ stat }: StatHeaderProps) => (
   <th
     key={stat}
-    className={twMerge('text-left py-2 px-1 font-medium w-16', twColors.textMuted)}
+    className={twMerge(
+      'text-left py-2 px-1 font-medium w-16',
+      twColors.textMuted,
+    )}
     title={stat}
   >
     {stat.length > 6 ? stat.slice(0, 6) + '..' : stat}
@@ -28,7 +31,10 @@ interface StatCellProps {
 
 const StatCell = ({ value }: StatCellProps) => (
   <td
-    className={twMerge('py-2 px-1 font-mono text-xs truncate', twColors.textMuted)}
+    className={twMerge(
+      'py-2 px-1 font-mono text-xs truncate',
+      twColors.textMuted,
+    )}
     title={String(value)}
   >
     {typeof value === 'number'
@@ -49,7 +55,7 @@ const ColumnStatRow = ({ columnName, statsValue }: ColumnStatRowProps) => (
     className={twMerge(
       'transition-colors border-b',
       twColors.borderPanel,
-      twColors.bgHover
+      twColors.bgHover,
     )}
   >
     <td
@@ -59,10 +65,20 @@ const ColumnStatRow = ({ columnName, statsValue }: ColumnStatRowProps) => (
       {columnName}
     </td>
     {statsValue && typeof statsValue === 'object'
-      ? Object.values(statsValue as Record<string, SampleValue>).map((value, idx) => (
-          <StatCell key={idx} value={value} />
-        ))
-      : [<StatCell key="single-value" value={statsValue} />]}
+      ? Object.values(statsValue as Record<string, SampleValue>).map(
+          (value, idx) => (
+            <StatCell
+              key={idx}
+              value={value}
+            />
+          ),
+        )
+      : [
+          <StatCell
+            key="single-value"
+            value={statsValue}
+          />,
+        ]}
   </tr>
 )
 
@@ -91,7 +107,7 @@ export function ColumnStatsSection({
         'px-2 py-1 text-xs rounded border',
         twColors.bgInput,
         'text-[var(--vscode-symbolIcon-classForeground,#9b59b6)]',
-        'border-[var(--vscode-symbolIcon-classForeground,#9b59b6)]'
+        'border-[var(--vscode-symbolIcon-classForeground,#9b59b6)]',
       )}
       expanded={expanded}
       onToggle={onToggle}
@@ -101,11 +117,19 @@ export function ColumnStatsSection({
           <table className="w-full text-xs table-fixed">
             <thead className={twMerge('sticky top-0 z-10', twColors.bgEditor)}>
               <tr className={twMerge('border-b', twColors.borderPanel)}>
-                <th className={twMerge('text-left py-2 pr-2 font-medium w-28', twColors.textMuted)}>
+                <th
+                  className={twMerge(
+                    'text-left py-2 pr-2 font-medium w-28',
+                    twColors.textMuted,
+                  )}
+                >
                   Column
                 </th>
                 {statKeys.map(stat => (
-                  <StatHeader key={stat} stat={stat} />
+                  <StatHeader
+                    key={stat}
+                    stat={stat}
+                  />
                 ))}
               </tr>
             </thead>

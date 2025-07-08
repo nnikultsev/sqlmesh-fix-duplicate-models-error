@@ -30,7 +30,7 @@ export function SectionToggle({
         className={twMerge(
           'w-full px-4 py-2 flex items-center text-left select-none transition-colors',
           twColors.textForeground,
-          twColors.bgHover
+          twColors.bgHover,
         )}
       >
         {expanded ? (
@@ -41,7 +41,9 @@ export function SectionToggle({
         <span className="font-medium flex-1">{title}</span>
         {badge && (
           <span
-            className={badgeClassName || "text-xs px-2 py-0.5 rounded ml-2 border"}
+            className={
+              badgeClassName || 'text-xs px-2 py-0.5 rounded ml-2 border'
+            }
             style={badgeStyle}
           >
             {badge}
@@ -51,7 +53,7 @@ export function SectionToggle({
       <div
         className={twMerge(
           'overflow-hidden transition-all duration-200',
-          expanded ? 'max-h-screen' : 'max-h-0'
+          expanded ? 'max-h-screen' : 'max-h-0',
         )}
       >
         {children}

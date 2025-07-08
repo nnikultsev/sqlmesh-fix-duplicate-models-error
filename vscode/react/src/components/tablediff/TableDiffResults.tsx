@@ -46,7 +46,7 @@ export function TableDiffResults({ data }: Props) {
       className={twMerge(
         'h-full w-full text-[13px] font-sans',
         twColors.bgEditor,
-        twColors.textForeground
+        twColors.textForeground,
       )}
     >
       {/* Header */}
@@ -54,7 +54,7 @@ export function TableDiffResults({ data }: Props) {
         className={twMerge(
           'px-4 py-3 space-y-2 sticky top-0 z-20 border-b',
           twColors.borderPanel,
-          twColors.bgEditor
+          twColors.bgEditor,
         )}
       >
         <div className="flex items-center gap-3 flex-wrap">
@@ -66,12 +66,17 @@ export function TableDiffResults({ data }: Props) {
               'px-2 py-1 rounded text-sm whitespace-nowrap border',
               twColors.textInfo,
               twColors.bgInput,
-              twColors.borderPanel
+              twColors.borderPanel,
             )}
           >
             {schema_diff.source}
           </code>
-          <span className={twMerge('text-sm font-medium ml-4', twColors.textSuccess)}>
+          <span
+            className={twMerge(
+              'text-sm font-medium ml-4',
+              twColors.textSuccess,
+            )}
+          >
             Target:
           </span>
           <code
@@ -79,7 +84,7 @@ export function TableDiffResults({ data }: Props) {
               'px-2 py-1 rounded text-sm whitespace-nowrap border',
               twColors.textSuccess,
               twColors.bgInput,
-              twColors.borderPanel
+              twColors.borderPanel,
             )}
           >
             {schema_diff.target}
@@ -148,7 +153,7 @@ export function TableDiffResults({ data }: Props) {
               'px-2 py-1 text-xs rounded border',
               twColors.bgInput,
               twColors.textAccent,
-              'border-[var(--vscode-textLink-foreground)]'
+              'border-[var(--vscode-textLink-foreground)]',
             )}
             expanded={expanded.sampleData}
             onToggle={() => toggle('sampleData')}

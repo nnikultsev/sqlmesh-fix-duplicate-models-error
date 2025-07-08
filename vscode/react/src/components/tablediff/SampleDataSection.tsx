@@ -17,17 +17,21 @@ interface TableHeaderCellProps {
   targetName?: SampleValue
 }
 
-const TableHeaderCell = ({ columnKey, sourceName, targetName }: TableHeaderCellProps) => {
+const TableHeaderCell = ({
+  columnKey,
+  sourceName,
+  targetName,
+}: TableHeaderCellProps) => {
   const isSource = columnKey === sourceName
   const isTarget = columnKey === targetName
-  
+
   return (
     <th
       className={twMerge(
         'text-left py-2 px-2 font-medium whitespace-nowrap',
         isSource && twColors.textInfo,
         isTarget && twColors.textSuccess,
-        !isSource && !isTarget && twColors.textMuted
+        !isSource && !isTarget && twColors.textMuted,
       )}
     >
       {columnKey}
@@ -43,17 +47,23 @@ interface DiffTableCellProps {
   decimals?: number
 }
 
-const DiffTableCell = ({ columnKey, value, sourceName, targetName, decimals = 3 }: DiffTableCellProps) => {
+const DiffTableCell = ({
+  columnKey,
+  value,
+  sourceName,
+  targetName,
+  decimals = 3,
+}: DiffTableCellProps) => {
   const isSource = columnKey === sourceName
   const isTarget = columnKey === targetName
-  
+
   return (
     <td
       className={twMerge(
         'py-2 px-2 font-mono whitespace-nowrap',
         isSource && twColors.textInfo + ' bg-blue-500/10',
         isTarget && twColors.textSuccess + ' bg-green-500/10',
-        !isSource && !isTarget && twColors.textForeground
+        !isSource && !isTarget && twColors.textForeground,
       )}
     >
       {formatCellValue(value, decimals)}
@@ -68,13 +78,18 @@ interface DiffTableRowProps {
   decimals?: number
 }
 
-const DiffTableRow = ({ row, sourceName, targetName, decimals }: DiffTableRowProps) => (
+const DiffTableRow = ({
+  row,
+  sourceName,
+  targetName,
+  decimals,
+}: DiffTableRowProps) => (
   <tr
     className={twMerge(
       'transition-colors',
       twColors.borderPanel,
       'border-b',
-      twColors.bgHover
+      twColors.bgHover,
     )}
   >
     {Object.entries(row)
@@ -98,7 +113,11 @@ interface SimpleTableCellProps {
   decimals?: number
 }
 
-const SimpleTableCell = ({ value, colorClass, decimals = 3 }: SimpleTableCellProps) => (
+const SimpleTableCell = ({
+  value,
+  colorClass,
+  decimals = 3,
+}: SimpleTableCellProps) => (
   <td className={twMerge('py-2 px-2 font-mono whitespace-nowrap', colorClass)}>
     {formatCellValue(value, decimals)}
   </td>
@@ -111,12 +130,17 @@ interface SimpleTableRowProps {
   decimals?: number
 }
 
-const SimpleTableRow = ({ row, colorClass, borderColorClass, decimals }: SimpleTableRowProps) => (
+const SimpleTableRow = ({
+  row,
+  colorClass,
+  borderColorClass,
+  decimals,
+}: SimpleTableRowProps) => (
   <tr
     className={twMerge(
       'transition-colors border-b',
       borderColorClass,
-      twColors.bgHover
+      twColors.bgHover,
     )}
   >
     {Object.values(row).map((cell, cellIdx) => (
@@ -136,7 +160,11 @@ interface ColumnDifferenceGroupProps {
   decimals: number
 }
 
-const ColumnDifferenceGroup = ({ columnName, rows, decimals }: ColumnDifferenceGroupProps) => {
+const ColumnDifferenceGroup = ({
+  columnName,
+  rows,
+  decimals,
+}: ColumnDifferenceGroupProps) => {
   if (!rows || rows.length === 0) return null
 
   const sourceName = rows[0].__source_name__
@@ -147,10 +175,12 @@ const ColumnDifferenceGroup = ({ columnName, rows, decimals }: ColumnDifferenceG
       className={twMerge(
         'border rounded-lg p-4',
         twColors.bgInactiveSelection,
-        twColors.borderPanel
+        twColors.borderPanel,
       )}
     >
-      <h5 className={twMerge('font-medium mb-2 underline', twColors.textAccent)}>
+      <h5
+        className={twMerge('font-medium mb-2 underline', twColors.textAccent)}
+      >
         Column: {columnName}
       </h5>
       <div className="overflow-auto max-h-80">
@@ -249,26 +279,33 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
       {/* SOURCE ONLY & TARGET ONLY tables */}
       {source_only && source_only.length > 0 && (
         <div>
-          <h4 className={twMerge('text-sm font-medium mb-3', twColors.textWarning)}>
+          <h4
+            className={twMerge(
+              'text-sm font-medium mb-3',
+              twColors.textWarning,
+            )}
+          >
             SOURCE ONLY Rows:
           </h4>
           <div
             className={twMerge(
               'border rounded-lg p-4',
               twColors.bgModified,
-              twColors.borderModified
+              twColors.borderModified,
             )}
           >
             <div className="overflow-auto max-h-80">
               <table className="w-full text-xs">
-                <thead className={twMerge('sticky top-0 z-10', twColors.bgModified)}>
+                <thead
+                  className={twMerge('sticky top-0 z-10', twColors.bgModified)}
+                >
                   <tr className={twMerge('border-b', twColors.borderModified)}>
                     {Object.keys(source_only[0] || {}).map(col => (
                       <th
                         key={col}
                         className={twMerge(
                           'text-left py-2 px-2 font-medium whitespace-nowrap',
-                          twColors.textModified
+                          twColors.textModified,
                         )}
                       >
                         {col}
@@ -300,26 +337,33 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
 
       {target_only && target_only.length > 0 && (
         <div>
-          <h4 className={twMerge('text-sm font-medium mb-3', twColors.textSuccess)}>
+          <h4
+            className={twMerge(
+              'text-sm font-medium mb-3',
+              twColors.textSuccess,
+            )}
+          >
             TARGET ONLY Rows:
           </h4>
           <div
             className={twMerge(
               'border rounded-lg p-4',
               twColors.bgAdded,
-              twColors.borderAdded
+              twColors.borderAdded,
             )}
           >
             <div className="overflow-auto max-h-80">
               <table className="w-full text-xs">
-                <thead className={twMerge('sticky top-0 z-10', twColors.bgAdded)}>
+                <thead
+                  className={twMerge('sticky top-0 z-10', twColors.bgAdded)}
+                >
                   <tr className={twMerge('border-b', twColors.borderAdded)}>
                     {Object.keys(target_only[0] || {}).map(col => (
                       <th
                         key={col}
                         className={twMerge(
                           'text-left py-2 px-2 font-medium whitespace-nowrap',
-                          twColors.textAdded
+                          twColors.textAdded,
                         )}
                       >
                         {col}

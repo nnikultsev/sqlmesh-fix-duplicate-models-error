@@ -33,7 +33,7 @@ export function RowStatsSection({
         'px-2 py-1 text-xs rounded border',
         twColors.bgInput,
         twColors.textInfo,
-        twColors.borderInfo
+        twColors.borderInfo,
       )}
       expanded={expanded}
       onToggle={onToggle}
@@ -65,15 +65,28 @@ export function RowStatsSection({
         </div>
         {/* Match rate progress bar */}
         <div className="mt-3 space-y-1">
-          <div className={twMerge('flex items-center gap-2 text-xs', twColors.textMuted)}>
+          <div
+            className={twMerge(
+              'flex items-center gap-2 text-xs',
+              twColors.textMuted,
+            )}
+          >
             <span>Match Rate</span>
             <span className="font-medium">
               {formatPercentage(fullMatchPct)}
             </span>
           </div>
-          <div className={twMerge('h-2 rounded-full overflow-hidden', twColors.bgInput)}>
+          <div
+            className={twMerge(
+              'h-2 rounded-full overflow-hidden',
+              twColors.bgInput,
+            )}
+          >
             <div
-              className={twMerge('h-full transition-all duration-300', twColors.textSuccess.replace('text-', 'bg-'))}
+              className={twMerge(
+                'h-full transition-all duration-300',
+                twColors.textSuccess.replace('text-', 'bg-'),
+              )}
               style={{ width: `${fullMatchPct * 100}%` }}
             />
           </div>
