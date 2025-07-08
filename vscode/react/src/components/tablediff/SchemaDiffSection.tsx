@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { SectionToggle } from './SectionToggle'
-import { type TableDiffData, themeColors } from './types'
+import { type TableDiffData } from './types'
+import { twColors, twMerge } from './tailwind-utils'
 
 interface SchemaDiffSectionProps {
   schemaDiff: TableDiffData['schema_diff']
@@ -15,56 +16,45 @@ interface SchemaChangeItemProps {
 }
 
 const SchemaChangeItem = ({ column, type, changeType }: SchemaChangeItemProps) => {
-  const styles = {
+  const styleMap = {
     added: {
-      backgroundColor: 'var(--vscode-diffEditor-insertedTextBackground, rgba(34, 197, 94, 0.2))',
-      borderColor: themeColors.addedText,
-      color: themeColors.addedText,
+      bgClass: twColors.bgAdded,
+      borderClass: 'border-l-2 ' + twColors.borderAdded,
+      textClass: twColors.textAdded,
       symbol: '+',
     },
     removed: {
-      backgroundColor: 'var(--vscode-diffEditor-removedTextBackground, rgba(239, 68, 68, 0.2))',
-      borderColor: themeColors.removedText,
-      color: themeColors.removedText,
+      bgClass: twColors.bgRemoved,
+      borderClass: 'border-l-2 ' + twColors.borderRemoved,
+      textClass: twColors.textRemoved,
       symbol: '-',
     },
     modified: {
-      backgroundColor: 'var(--vscode-diffEditor-modifiedTextBackground, rgba(245, 158, 11, 0.2))',
-      borderColor: themeColors.modifiedText,
-      color: themeColors.modifiedText,
+      bgClass: twColors.bgModified,
+      borderClass: 'border-l-2 ' + twColors.borderModified,
+      textClass: twColors.textModified,
       symbol: '~',
     },
   }
 
-  const style = styles[changeType]
+  const { bgClass, borderClass, textClass, symbol } = styleMap[changeType]
 
   return (
     <div
-      className="flex items-center gap-2 text-xs pl-3 py-1 rounded-r"
-      style={{
-        backgroundColor: style.backgroundColor,
-        borderLeft: `2px solid ${style.borderColor}`,
-      }}
+      className={twMerge(
+        'flex items-center gap-2 text-xs pl-3 py-1 rounded-r',
+        bgClass,
+        borderClass
+      )}
     >
-      <span
-        className="font-mono font-bold"
-        style={{ color: style.color }}
-      >
-        {style.symbol}
+      <span className={twMerge('font-mono font-bold', textClass)}>
+        {symbol}
       </span>
-      <span
-        className="font-mono truncate"
-        title={column}
-        style={{ color: style.color }}
-      >
+      <span className={twMerge('font-mono truncate', textClass)} title={column}>
         {column}
       </span>
-      <span style={{ color: themeColors.muted }}>:</span>
-      <span
-        className="truncate"
-        title={type}
-        style={{ color: style.color }}
-      >
+      <span className={twColors.textMuted}>:</span>
+      <span className={twMerge('truncate', textClass)} title={type}>
         {type}
       </span>
     </div>
@@ -98,26 +88,18 @@ export function SchemaDiffSection({
           ? `${totalChanges} changes`
           : 'No changes'
       }
-      badgeStyle={{
-        backgroundColor: schemaHasChanges
-          ? 'var(--vscode-diffEditor-modifiedTextBackground, rgba(245, 158, 11, 0.2))'
-          : 'var(--vscode-diffEditor-insertedTextBackground, rgba(34, 197, 94, 0.2))',
-        color: schemaHasChanges
-          ? themeColors.modifiedText
-          : themeColors.addedText,
-        borderColor: schemaHasChanges
-          ? themeColors.modifiedText
-          : themeColors.addedText,
-      }}
+      badgeClassName={twMerge(
+        'px-2 py-1 text-xs rounded border',
+        schemaHasChanges
+          ? twColors.bgModified + ' ' + twColors.textModified + ' ' + twColors.borderModified
+          : twColors.bgAdded + ' ' + twColors.textAdded + ' ' + twColors.borderAdded
+      )}
       expanded={expanded}
       onToggle={onToggle}
     >
       <div className="px-8 py-3 space-y-2">
         {!schemaHasChanges ? (
-          <div
-            className="text-xs"
-            style={{ color: themeColors.success }}
-          >
+          <div className={twMerge('text-xs', twColors.textSuccess)}>
             ✓ Schemas are identical
           </div>
         ) : (

@@ -1,5 +1,6 @@
 import { SectionToggle } from './SectionToggle'
-import { type TableDiffData, themeColors } from './types'
+import { type TableDiffData } from './types'
+import { twColors, twMerge } from './tailwind-utils'
 
 interface RowStatsSectionProps {
   rowDiff: TableDiffData['row_diff']
@@ -28,11 +29,12 @@ export function RowStatsSection({
       id="rows"
       title="Row Statistics"
       badge={`${formatPercentage(fullMatchPct)} match rate`}
-      badgeStyle={{
-        backgroundColor: 'var(--vscode-input-background)',
-        color: themeColors.info,
-        borderColor: themeColors.info,
-      }}
+      badgeClassName={twMerge(
+        'px-2 py-1 text-xs rounded border',
+        twColors.bgInput,
+        twColors.textInfo,
+        twColors.borderInfo
+      )}
       expanded={expanded}
       onToggle={onToggle}
     >
@@ -40,11 +42,11 @@ export function RowStatsSection({
         <div className="grid grid-cols-2 gap-4 text-xs">
           <div className="space-y-1">
             <div className="flex justify-between">
-              <span style={{ color: themeColors.success }}>✓ Full Matches</span>
+              <span className={twColors.textSuccess}>✓ Full Matches</span>
               <span className="font-medium">{formatCount(fullMatchCount)}</span>
             </div>
             <div className="flex justify-between">
-              <span style={{ color: themeColors.info }}>~ Partial Matches</span>
+              <span className={twColors.textInfo}>~ Partial Matches</span>
               <span className="font-medium">
                 {formatCount(partialMatchCount)}
               </span>
@@ -52,36 +54,27 @@ export function RowStatsSection({
           </div>
           <div className="space-y-1">
             <div className="flex justify-between">
-              <span style={{ color: themeColors.warning }}>+ Source Only</span>
+              <span className={twColors.textWarning}>+ Source Only</span>
               <span className="font-medium">{formatCount(sOnlyCount)}</span>
             </div>
             <div className="flex justify-between">
-              <span style={{ color: themeColors.error }}>- Target Only</span>
+              <span className={twColors.textError}>- Target Only</span>
               <span className="font-medium">{formatCount(tOnlyCount)}</span>
             </div>
           </div>
         </div>
         {/* Match rate progress bar */}
         <div className="mt-3 space-y-1">
-          <div
-            className="flex items-center gap-2 text-xs"
-            style={{ color: themeColors.muted }}
-          >
+          <div className={twMerge('flex items-center gap-2 text-xs', twColors.textMuted)}>
             <span>Match Rate</span>
             <span className="font-medium">
               {formatPercentage(fullMatchPct)}
             </span>
           </div>
-          <div
-            className="h-2 rounded-full overflow-hidden"
-            style={{ backgroundColor: 'var(--vscode-input-background)' }}
-          >
+          <div className={twMerge('h-2 rounded-full overflow-hidden', twColors.bgInput)}>
             <div
-              className="h-full transition-all duration-300"
-              style={{
-                width: `${fullMatchPct * 100}%`,
-                backgroundColor: themeColors.success,
-              }}
+              className={twMerge('h-full transition-all duration-300', twColors.textSuccess.replace('text-', 'bg-'))}
+              style={{ width: `${fullMatchPct * 100}%` }}
             />
           </div>
         </div>

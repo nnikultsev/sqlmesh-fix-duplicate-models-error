@@ -11,4 +11,5 @@ export { SampleDataSection } from './SampleDataSection'
 
 // Utilities
 export { usePersistedState } from './hooks'
+export { twColors, twMerge } from './tailwind-utils'
 export * from './types'

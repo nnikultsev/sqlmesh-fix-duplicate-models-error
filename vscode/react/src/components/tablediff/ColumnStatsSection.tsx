@@ -1,5 +1,6 @@
 import { SectionToggle } from './SectionToggle'
-import { type TableDiffData, type SampleValue, themeColors } from './types'
+import { type TableDiffData, type SampleValue } from './types'
+import { twColors, twMerge } from './tailwind-utils'
 
 interface ColumnStatsSectionProps {
   columnStats: TableDiffData['row_diff']['column_stats']
@@ -14,9 +15,8 @@ interface StatHeaderProps {
 const StatHeader = ({ stat }: StatHeaderProps) => (
   <th
     key={stat}
-    className="text-left py-2 px-1 font-medium w-16"
+    className={twMerge('text-left py-2 px-1 font-medium w-16', twColors.textMuted)}
     title={stat}
-    style={{ color: themeColors.muted }}
   >
     {stat.length > 6 ? stat.slice(0, 6) + '..' : stat}
   </th>
@@ -28,9 +28,8 @@ interface StatCellProps {
 
 const StatCell = ({ value }: StatCellProps) => (
   <td
-    className="py-2 px-1 font-mono text-xs truncate"
+    className={twMerge('py-2 px-1 font-mono text-xs truncate', twColors.textMuted)}
     title={String(value)}
-    style={{ color: themeColors.muted }}
   >
     {typeof value === 'number'
       ? value.toFixed(1)
@@ -47,17 +46,11 @@ interface ColumnStatRowProps {
 
 const ColumnStatRow = ({ columnName, statsValue }: ColumnStatRowProps) => (
   <tr
-    className="transition-colors"
-    style={{
-      borderBottom: `1px solid ${themeColors.border}`,
-    }}
-    onMouseEnter={e => {
-      e.currentTarget.style.backgroundColor =
-        'var(--vscode-list-hoverBackground)'
-    }}
-    onMouseLeave={e => {
-      e.currentTarget.style.backgroundColor = 'transparent'
-    }}
+    className={twMerge(
+      'transition-colors border-b',
+      twColors.borderPanel,
+      twColors.bgHover
+    )}
   >
     <td
       className="py-2 pr-2 font-mono truncate"
@@ -94,32 +87,21 @@ export function ColumnStatsSection({
       id="columnStats"
       title="Column Statistics"
       badge={`${Object.keys(columnStats).length} columns`}
-      badgeStyle={{
-        backgroundColor: 'var(--vscode-input-background)',
-        color: 'var(--vscode-symbolIcon-classForeground, #9b59b6)',
-        borderColor: 'var(--vscode-symbolIcon-classForeground, #9b59b6)',
-      }}
+      badgeClassName={twMerge(
+        'px-2 py-1 text-xs rounded border',
+        twColors.bgInput,
+        'text-[var(--vscode-symbolIcon-classForeground,#9b59b6)]',
+        'border-[var(--vscode-symbolIcon-classForeground,#9b59b6)]'
+      )}
       expanded={expanded}
       onToggle={onToggle}
     >
       <div className="px-8 py-3">
         <div className="overflow-auto max-h-80">
           <table className="w-full text-xs table-fixed">
-            <thead
-              className="sticky top-0 z-10"
-              style={{
-                backgroundColor: 'var(--vscode-editor-background)',
-              }}
-            >
-              <tr
-                style={{
-                  borderBottom: `1px solid ${themeColors.border}`,
-                }}
-              >
-                <th
-                  className="text-left py-2 pr-2 font-medium w-28"
-                  style={{ color: themeColors.muted }}
-                >
+            <thead className={twMerge('sticky top-0 z-10', twColors.bgEditor)}>
+              <tr className={twMerge('border-b', twColors.borderPanel)}>
+                <th className={twMerge('text-left py-2 pr-2 font-medium w-28', twColors.textMuted)}>
                   Column
                 </th>
                 {statKeys.map(stat => (

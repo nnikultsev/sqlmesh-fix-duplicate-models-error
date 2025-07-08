@@ -4,7 +4,8 @@ import { RowStatsSection } from './RowStatsSection'
 import { ColumnStatsSection } from './ColumnStatsSection'
 import { SampleDataSection } from './SampleDataSection'
 import { usePersistedState } from './hooks'
-import { type TableDiffData, type ExpandedSections, themeColors } from './types'
+import { type TableDiffData, type ExpandedSections } from './types'
+import { twColors, twMerge } from './tailwind-utils'
 
 interface Props {
   data: TableDiffData
@@ -23,10 +24,7 @@ export function TableDiffResults({ data }: Props) {
 
   if (!data)
     return (
-      <div
-        className="p-4"
-        style={{ color: 'var(--vscode-editor-foreground)' }}
-      >
+      <div className={twMerge('p-4', twColors.textForeground)}>
         No data available
       </div>
     )
@@ -45,76 +43,69 @@ export function TableDiffResults({ data }: Props) {
 
   return (
     <div
-      className="h-full w-full text-[13px] font-sans"
-      style={{
-        backgroundColor: 'var(--vscode-editor-background)',
-        color: 'var(--vscode-editor-foreground)',
-      }}
+      className={twMerge(
+        'h-full w-full text-[13px] font-sans',
+        twColors.bgEditor,
+        twColors.textForeground
+      )}
     >
       {/* Header */}
       <div
-        className="px-4 py-3 space-y-2 sticky top-0 z-20"
-        style={{
-          borderBottom: `1px solid ${themeColors.border}`,
-          backgroundColor: 'var(--vscode-editor-background)',
-        }}
+        className={twMerge(
+          'px-4 py-3 space-y-2 sticky top-0 z-20 border-b',
+          twColors.borderPanel,
+          twColors.bgEditor
+        )}
       >
         <div className="flex items-center gap-3 flex-wrap">
-          <span
-            className="text-sm font-medium"
-            style={{ color: themeColors.info }}
-          >
+          <span className={twMerge('text-sm font-medium', twColors.textInfo)}>
             Source:
           </span>
           <code
-            className="px-2 py-1 rounded text-sm whitespace-nowrap"
-            style={{
-              color: themeColors.info,
-              backgroundColor: 'var(--vscode-input-background)',
-              border: `1px solid ${themeColors.border}`,
-            }}
+            className={twMerge(
+              'px-2 py-1 rounded text-sm whitespace-nowrap border',
+              twColors.textInfo,
+              twColors.bgInput,
+              twColors.borderPanel
+            )}
           >
             {schema_diff.source}
           </code>
-          <span
-            className="text-sm font-medium ml-4"
-            style={{ color: themeColors.success }}
-          >
+          <span className={twMerge('text-sm font-medium ml-4', twColors.textSuccess)}>
             Target:
           </span>
           <code
-            className="px-2 py-1 rounded text-sm whitespace-nowrap"
-            style={{
-              color: themeColors.success,
-              backgroundColor: 'var(--vscode-input-background)',
-              border: `1px solid ${themeColors.border}`,
-            }}
+            className={twMerge(
+              'px-2 py-1 rounded text-sm whitespace-nowrap border',
+              twColors.textSuccess,
+              twColors.bgInput,
+              twColors.borderPanel
+            )}
           >
             {schema_diff.target}
           </code>
         </div>
         <div className="flex items-center gap-6 text-xs flex-wrap">
-          <span style={{ color: themeColors.info }}>
+          <span className={twColors.textInfo}>
             Source rows:{' '}
             <span className="font-medium">
               {formatCount(row_diff.source_count)}
             </span>
           </span>
-          <span style={{ color: themeColors.success }}>
+          <span className={twColors.textSuccess}>
             Target rows:{' '}
             <span className="font-medium">
               {formatCount(row_diff.target_count)}
             </span>
           </span>
           <span
-            style={{
-              color:
-                row_diff.count_pct_change > 0
-                  ? themeColors.success
-                  : row_diff.count_pct_change < 0
-                    ? themeColors.error
-                    : themeColors.muted,
-            }}
+            className={
+              row_diff.count_pct_change > 0
+                ? twColors.textSuccess
+                : row_diff.count_pct_change < 0
+                  ? twColors.textError
+                  : twColors.textMuted
+            }
           >
             Change:{' '}
             <span className="font-medium">
@@ -153,11 +144,12 @@ export function TableDiffResults({ data }: Props) {
             id="sampleData"
             title="Sample Data"
             badge={`${(row_diff.processed_sample_data.column_differences?.length || 0) + (row_diff.processed_sample_data.source_only?.length || 0) + (row_diff.processed_sample_data.target_only?.length || 0)} rows`}
-            badgeStyle={{
-              backgroundColor: 'var(--vscode-input-background)',
-              color: themeColors.accent,
-              borderColor: themeColors.accent,
-            }}
+            badgeClassName={twMerge(
+              'px-2 py-1 text-xs rounded border',
+              twColors.bgInput,
+              twColors.textAccent,
+              'border-[var(--vscode-textLink-foreground)]'
+            )}
             expanded={expanded.sampleData}
             onToggle={() => toggle('sampleData')}
           >
