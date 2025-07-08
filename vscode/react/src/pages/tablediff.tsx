@@ -16,9 +16,7 @@ export function TableDiffPage() {
 
   return (
     <QueryClientProvider client={client}>
-      <div className="h-[100vh] w-[100vw]">
-        <TableDiff />
-      </div>
+      <TableDiff />
     </QueryClientProvider>
   )
 }

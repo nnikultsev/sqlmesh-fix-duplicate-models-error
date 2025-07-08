@@ -104,7 +104,7 @@ export function TableDiff() {
   // If we're still loading, show loading state
   if (isLoadingDiff) {
     return (
-      <div className="h-full w-full">
+      <div className="h-[100vh] w-[100vw]">
         <LoadingStatus>Running table diff...</LoadingStatus>
       </div>
     )
@@ -115,7 +115,7 @@ export function TableDiff() {
     // Show results if we have them
     if (tableDiffData) {
       return (
-        <div className="h-full w-full">
+        <div className="h-[100vh] w-[100vw]">
           <TableDiffResults data={tableDiffData} />
         </div>
       )
@@ -124,7 +124,7 @@ export function TableDiff() {
     // Show error if there was one
     if (diffError) {
       return (
-        <div className="h-full w-full flex items-center justify-center">
+        <div className="h-[100vh] w-[100vw] flex items-center justify-center">
           <div className="text-red-400 text-center">
             <div className="text-lg font-semibold mb-2">
               Error running table diff
@@ -137,7 +137,7 @@ export function TableDiff() {
 
     // If we have initial data but no results and no error, show appropriate message
     return (
-      <div className="h-full w-full flex items-center justify-center">
+      <div className="h-[100vh] w-[100vw] flex items-center justify-center">
         <div className="text-neutral-400 text-center">
           <div className="text-lg font-semibold mb-2">No differences found</div>
           <div>
@@ -154,7 +154,7 @@ export function TableDiff() {
   // If we don't have initial data yet, show loading
   if (!hasInitialData) {
     return (
-      <div className="h-full w-full">
+      <div className="h-[100vh] w-[100vw]">
         <LoadingStatus>Loading...</LoadingStatus>
       </div>
     )
@@ -162,7 +162,7 @@ export function TableDiff() {
 
   // This should never happen with the new flow
   return (
-    <div className="h-full w-full flex items-center justify-center">
+    <div className="h-[100vh] w-[100vw] flex items-center justify-center">
       <div className="text-neutral-400 text-center">
         <div className="text-lg font-semibold mb-2">Unexpected state</div>
         <div>Please try running the table diff command again.</div>
