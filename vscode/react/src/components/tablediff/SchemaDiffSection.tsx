@@ -8,6 +8,69 @@ interface SchemaDiffSectionProps {
   onToggle: () => void
 }
 
+interface SchemaChangeItemProps {
+  column: string
+  type: string
+  changeType: 'added' | 'removed' | 'modified'
+}
+
+const SchemaChangeItem = ({ column, type, changeType }: SchemaChangeItemProps) => {
+  const styles = {
+    added: {
+      backgroundColor: 'var(--vscode-diffEditor-insertedTextBackground, rgba(34, 197, 94, 0.2))',
+      borderColor: themeColors.addedText,
+      color: themeColors.addedText,
+      symbol: '+',
+    },
+    removed: {
+      backgroundColor: 'var(--vscode-diffEditor-removedTextBackground, rgba(239, 68, 68, 0.2))',
+      borderColor: themeColors.removedText,
+      color: themeColors.removedText,
+      symbol: '-',
+    },
+    modified: {
+      backgroundColor: 'var(--vscode-diffEditor-modifiedTextBackground, rgba(245, 158, 11, 0.2))',
+      borderColor: themeColors.modifiedText,
+      color: themeColors.modifiedText,
+      symbol: '~',
+    },
+  }
+
+  const style = styles[changeType]
+
+  return (
+    <div
+      className="flex items-center gap-2 text-xs pl-3 py-1 rounded-r"
+      style={{
+        backgroundColor: style.backgroundColor,
+        borderLeft: `2px solid ${style.borderColor}`,
+      }}
+    >
+      <span
+        className="font-mono font-bold"
+        style={{ color: style.color }}
+      >
+        {style.symbol}
+      </span>
+      <span
+        className="font-mono truncate"
+        title={column}
+        style={{ color: style.color }}
+      >
+        {column}
+      </span>
+      <span style={{ color: themeColors.muted }}>:</span>
+      <span
+        className="truncate"
+        title={type}
+        style={{ color: style.color }}
+      >
+        {type}
+      </span>
+    </div>
+  )
+}
+
 export function SchemaDiffSection({
   schemaDiff,
   expanded,
@@ -21,16 +84,20 @@ export function SchemaDiffSection({
     )
   }, [schemaDiff])
 
-  const totalChanges =
-    Object.keys(schemaDiff.added).length +
-    Object.keys(schemaDiff.removed).length +
+  const totalChanges = 
+    Object.keys(schemaDiff.added).length + 
+    Object.keys(schemaDiff.removed).length + 
     Object.keys(schemaDiff.modified).length
 
   return (
     <SectionToggle
       id="schema"
       title="Schema Changes"
-      badge={schemaHasChanges ? `${totalChanges} changes` : 'No changes'}
+      badge={
+        schemaHasChanges
+          ? `${totalChanges} changes`
+          : 'No changes'
+      }
       badgeStyle={{
         backgroundColor: schemaHasChanges
           ? 'var(--vscode-diffEditor-modifiedTextBackground, rgba(245, 158, 11, 0.2))'
@@ -56,103 +123,13 @@ export function SchemaDiffSection({
         ) : (
           <>
             {Object.entries(schemaDiff.added).map(([col, type]) => (
-              <div
-                key={col}
-                className="flex items-center gap-2 text-xs pl-3 py-1 rounded-r"
-                style={{
-                  backgroundColor:
-                    'var(--vscode-diffEditor-insertedTextBackground, rgba(34, 197, 94, 0.2))',
-                  borderLeft: `2px solid ${themeColors.addedText}`,
-                }}
-              >
-                <span
-                  className="font-mono font-bold"
-                  style={{ color: themeColors.addedText }}
-                >
-                  +
-                </span>
-                <span
-                  className="font-mono truncate"
-                  title={col}
-                  style={{ color: themeColors.addedText }}
-                >
-                  {col}
-                </span>
-                <span style={{ color: themeColors.muted }}>:</span>
-                <span
-                  className="truncate"
-                  title={type}
-                  style={{ color: themeColors.addedText }}
-                >
-                  {type}
-                </span>
-              </div>
+              <SchemaChangeItem key={col} column={col} type={type} changeType="added" />
             ))}
             {Object.entries(schemaDiff.removed).map(([col, type]) => (
-              <div
-                key={col}
-                className="flex items-center gap-2 text-xs pl-3 py-1 rounded-r"
-                style={{
-                  backgroundColor:
-                    'var(--vscode-diffEditor-removedTextBackground, rgba(239, 68, 68, 0.2))',
-                  borderLeft: `2px solid ${themeColors.removedText}`,
-                }}
-              >
-                <span
-                  className="font-mono font-bold"
-                  style={{ color: themeColors.removedText }}
-                >
-                  -
-                </span>
-                <span
-                  className="font-mono truncate"
-                  title={col}
-                  style={{ color: themeColors.removedText }}
-                >
-                  {col}
-                </span>
-                <span style={{ color: themeColors.muted }}>:</span>
-                <span
-                  className="truncate"
-                  title={type}
-                  style={{ color: themeColors.removedText }}
-                >
-                  {type}
-                </span>
-              </div>
+              <SchemaChangeItem key={col} column={col} type={type} changeType="removed" />
             ))}
             {Object.entries(schemaDiff.modified).map(([col, type]) => (
-              <div
-                key={col}
-                className="flex items-center gap-2 text-xs pl-3 py-1 rounded-r"
-                style={{
-                  backgroundColor:
-                    'var(--vscode-diffEditor-modifiedTextBackground, rgba(245, 158, 11, 0.2))',
-                  borderLeft: `2px solid ${themeColors.modifiedText}`,
-                }}
-              >
-                <span
-                  className="font-mono font-bold"
-                  style={{ color: themeColors.modifiedText }}
-                >
-                  ~
-                </span>
-                <span
-                  className="font-mono truncate"
-                  title={col}
-                  style={{ color: themeColors.modifiedText }}
-                >
-                  {col}
-                </span>
-                <span style={{ color: themeColors.muted }}>:</span>
-                <span
-                  className="truncate"
-                  title={type}
-                  style={{ color: themeColors.modifiedText }}
-                >
-                  {type}
-                </span>
-              </div>
+              <SchemaChangeItem key={col} column={col} type={type} changeType="modified" />
             ))}
           </>
         )}

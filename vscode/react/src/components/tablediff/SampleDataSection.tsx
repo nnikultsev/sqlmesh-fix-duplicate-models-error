@@ -2,12 +2,229 @@ import { useMemo } from 'react'
 import {
   type TableDiffData,
   type SampleRow,
+  type SampleValue,
   themeColors,
   formatCellValue,
 } from './types'
 
 interface SampleDataSectionProps {
   rowDiff: TableDiffData['row_diff']
+}
+
+interface TableHeaderCellProps {
+  columnKey: string
+  sourceName?: SampleValue
+  targetName?: SampleValue
+}
+
+const TableHeaderCell = ({ columnKey, sourceName, targetName }: TableHeaderCellProps) => {
+  const isSource = columnKey === sourceName
+  const isTarget = columnKey === targetName
+  
+  return (
+    <th
+      className="text-left py-2 px-2 font-medium whitespace-nowrap"
+      style={{
+        color: isSource
+          ? themeColors.info
+          : isTarget
+            ? themeColors.success
+            : themeColors.muted,
+      }}
+    >
+      {columnKey}
+    </th>
+  )
+}
+
+interface DiffTableCellProps {
+  columnKey: string
+  value: SampleValue
+  sourceName?: SampleValue
+  targetName?: SampleValue
+  decimals?: number
+}
+
+const DiffTableCell = ({ columnKey, value, sourceName, targetName, decimals = 3 }: DiffTableCellProps) => {
+  const isSource = columnKey === sourceName
+  const isTarget = columnKey === targetName
+  
+  return (
+    <td
+      className="py-2 px-2 font-mono whitespace-nowrap"
+      style={{
+        color: isSource
+          ? themeColors.info
+          : isTarget
+            ? themeColors.success
+            : 'var(--vscode-editor-foreground)',
+        backgroundColor: isSource
+          ? 'var(--vscode-diffEditor-insertedTextBackground, rgba(59, 130, 246, 0.1))'
+          : isTarget
+            ? 'var(--vscode-diffEditor-removedTextBackground, rgba(34, 197, 94, 0.1))'
+            : 'transparent',
+      }}
+    >
+      {formatCellValue(value, decimals)}
+    </td>
+  )
+}
+
+interface DiffTableRowProps {
+  row: SampleRow
+  sourceName?: SampleValue
+  targetName?: SampleValue
+  decimals?: number
+}
+
+const DiffTableRow = ({ row, sourceName, targetName, decimals }: DiffTableRowProps) => (
+  <tr
+    className="transition-colors"
+    style={{
+      borderBottom: `1px solid ${themeColors.border}`,
+    }}
+    onMouseEnter={e => {
+      e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground)'
+    }}
+    onMouseLeave={e => {
+      e.currentTarget.style.backgroundColor = 'transparent'
+    }}
+  >
+    {Object.entries(row)
+      .filter(([key]) => !key.startsWith('__'))
+      .map(([key, cell]) => (
+        <DiffTableCell
+          key={key}
+          columnKey={key}
+          value={cell}
+          sourceName={sourceName}
+          targetName={targetName}
+          decimals={decimals}
+        />
+      ))}
+  </tr>
+)
+
+interface SimpleTableCellProps {
+  value: SampleValue
+  color: string
+  decimals?: number
+}
+
+const SimpleTableCell = ({ value, color, decimals = 3 }: SimpleTableCellProps) => (
+  <td
+    className="py-2 px-2 font-mono whitespace-nowrap"
+    style={{ color }}
+  >
+    {formatCellValue(value, decimals)}
+  </td>
+)
+
+interface SimpleTableRowProps {
+  row: SampleRow
+  color: string
+  borderColor: string
+  decimals?: number
+}
+
+const SimpleTableRow = ({ row, color, borderColor, decimals }: SimpleTableRowProps) => (
+  <tr
+    className="transition-colors"
+    style={{
+      borderBottom: `1px solid ${borderColor}`,
+    }}
+    onMouseEnter={e => {
+      e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground)'
+    }}
+    onMouseLeave={e => {
+      e.currentTarget.style.backgroundColor = 'transparent'
+    }}
+  >
+    {Object.values(row).map((cell, cellIdx) => (
+      <SimpleTableCell
+        key={cellIdx}
+        value={cell}
+        color={color}
+        decimals={decimals}
+      />
+    ))}
+  </tr>
+)
+
+interface ColumnDifferenceGroupProps {
+  columnName: string
+  rows: SampleRow[]
+  decimals: number
+}
+
+const ColumnDifferenceGroup = ({ columnName, rows, decimals }: ColumnDifferenceGroupProps) => {
+  if (!rows || rows.length === 0) return null
+
+  const sourceName = rows[0].__source_name__
+  const targetName = rows[0].__target_name__
+
+  return (
+    <div
+      className="border rounded-lg p-4"
+      style={{
+        backgroundColor: 'var(--vscode-editor-inactiveSelectionBackground)',
+        borderColor: themeColors.border,
+      }}
+    >
+      <h5
+        className="font-medium mb-2 underline"
+        style={{ color: themeColors.accent }}
+      >
+        Column: {columnName}
+      </h5>
+      <div className="overflow-auto max-h-80">
+        <table className="w-full text-xs">
+          <thead
+            className="sticky top-0 z-10"
+            style={{
+              backgroundColor: 'var(--vscode-editor-background)',
+            }}
+          >
+            <tr
+              style={{
+                borderBottom: `1px solid ${themeColors.border}`,
+              }}
+            >
+              {Object.keys(rows[0] || {})
+                .filter(key => !key.startsWith('__'))
+                .map(key => (
+                  <TableHeaderCell
+                    key={key}
+                    columnKey={key}
+                    sourceName={sourceName}
+                    targetName={targetName}
+                  />
+                ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.slice(0, 10).map((row, rowIdx) => (
+              <DiffTableRow
+                key={rowIdx}
+                row={row}
+                sourceName={sourceName}
+                targetName={targetName}
+                decimals={decimals}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rows.length > 10 && (
+        <p
+          className="text-xs mt-2"
+          style={{ color: themeColors.muted }}
+        >
+          Showing first 10 of {rows.length} differing rows
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
@@ -55,120 +272,14 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
         </h4>
         {Object.keys(groupedDifferences).length > 0 ? (
           <div className="space-y-4">
-            {Object.entries(groupedDifferences).map(([columnName, rows]) => {
-              if (!rows || rows.length === 0) return null
-
-              const sourceName = rows[0].__source_name__
-              const targetName = rows[0].__target_name__
-
-              return (
-                <div
-                  key={columnName}
-                  className="border rounded-lg p-4"
-                  style={{
-                    backgroundColor:
-                      'var(--vscode-editor-inactiveSelectionBackground)',
-                    borderColor: themeColors.border,
-                  }}
-                >
-                  <h5
-                    className="font-medium mb-2 underline"
-                    style={{ color: themeColors.accent }}
-                  >
-                    Column: {columnName}
-                  </h5>
-                  <div className="overflow-auto max-h-80">
-                    <table className="w-full text-xs">
-                      <thead
-                        className="sticky top-0 z-10"
-                        style={{
-                          backgroundColor: 'var(--vscode-editor-background)',
-                        }}
-                      >
-                        <tr
-                          style={{
-                            borderBottom: `1px solid ${themeColors.border}`,
-                          }}
-                        >
-                          {Object.keys(rows[0] || {})
-                            .filter(key => !key.startsWith('__'))
-                            .map(key => (
-                              <th
-                                key={key}
-                                className="text-left py-2 px-2 font-medium whitespace-nowrap"
-                                style={{
-                                  color:
-                                    key === sourceName
-                                      ? themeColors.info
-                                      : key === targetName
-                                        ? themeColors.success
-                                        : themeColors.muted,
-                                }}
-                              >
-                                {key}
-                              </th>
-                            ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows
-                          .slice(0, 10)
-                          .map((row: SampleRow, rowIdx: number) => (
-                            <tr
-                              key={rowIdx}
-                              className="transition-colors"
-                              style={{
-                                borderBottom: `1px solid ${themeColors.border}`,
-                              }}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  'var(--vscode-list-hoverBackground)'
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  'transparent'
-                              }}
-                            >
-                              {Object.entries(row)
-                                .filter(([key]) => !key.startsWith('__'))
-                                .map(([key, cell]) => (
-                                  <td
-                                    key={key}
-                                    className="py-2 px-2 font-mono whitespace-nowrap"
-                                    style={{
-                                      color:
-                                        key === sourceName
-                                          ? themeColors.info
-                                          : key === targetName
-                                            ? themeColors.success
-                                            : 'var(--vscode-editor-foreground)',
-                                      backgroundColor:
-                                        key === sourceName
-                                          ? 'var(--vscode-diffEditor-insertedTextBackground, rgba(59, 130, 246, 0.1))'
-                                          : key === targetName
-                                            ? 'var(--vscode-diffEditor-removedTextBackground, rgba(34, 197, 94, 0.1))'
-                                            : 'transparent',
-                                    }}
-                                  >
-                                    {formatCellValue(cell, decimals)}
-                                  </td>
-                                ))}
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {rows.length > 10 && (
-                    <p
-                      className="text-xs mt-2"
-                      style={{ color: themeColors.muted }}
-                    >
-                      Showing first 10 of {rows.length} differing rows
-                    </p>
-                  )}
-                </div>
-              )
-            })}
+            {Object.entries(groupedDifferences).map(([columnName, rows]) => (
+              <ColumnDifferenceGroup
+                key={columnName}
+                columnName={columnName}
+                rows={rows}
+                decimals={decimals}
+              />
+            ))}
           </div>
         ) : (
           <p
@@ -223,34 +334,15 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {source_only
-                    .slice(0, 10)
-                    .map((row: SampleRow, rowIdx: number) => (
-                      <tr
-                        key={rowIdx}
-                        className="transition-colors"
-                        style={{
-                          borderBottom: `1px solid ${themeColors.modifiedText}`,
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor =
-                            'var(--vscode-list-hoverBackground)'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = 'transparent'
-                        }}
-                      >
-                        {Object.values(row).map((cell, cellIdx) => (
-                          <td
-                            key={cellIdx}
-                            className="py-2 px-2 font-mono whitespace-nowrap"
-                            style={{ color: themeColors.modifiedText }}
-                          >
-                            {formatCellValue(cell, decimals)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
+                  {source_only.slice(0, 10).map((row, rowIdx) => (
+                    <SimpleTableRow
+                      key={rowIdx}
+                      row={row}
+                      color={themeColors.modifiedText}
+                      borderColor={themeColors.modifiedText}
+                      decimals={decimals}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -308,34 +400,15 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {target_only
-                    .slice(0, 10)
-                    .map((row: SampleRow, rowIdx: number) => (
-                      <tr
-                        key={rowIdx}
-                        className="transition-colors"
-                        style={{
-                          borderBottom: `1px solid ${themeColors.addedText}`,
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor =
-                            'var(--vscode-list-hoverBackground)'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = 'transparent'
-                        }}
-                      >
-                        {Object.values(row).map((cell, cellIdx) => (
-                          <td
-                            key={cellIdx}
-                            className="py-2 px-2 font-mono whitespace-nowrap"
-                            style={{ color: themeColors.addedText }}
-                          >
-                            {formatCellValue(cell, decimals)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
+                  {target_only.slice(0, 10).map((row, rowIdx) => (
+                    <SimpleTableRow
+                      key={rowIdx}
+                      row={row}
+                      color={themeColors.addedText}
+                      borderColor={themeColors.addedText}
+                      decimals={decimals}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>

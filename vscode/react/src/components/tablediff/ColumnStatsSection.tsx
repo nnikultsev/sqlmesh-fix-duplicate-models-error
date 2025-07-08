@@ -7,6 +7,72 @@ interface ColumnStatsSectionProps {
   onToggle: () => void
 }
 
+interface StatHeaderProps {
+  stat: string
+}
+
+const StatHeader = ({ stat }: StatHeaderProps) => (
+  <th
+    key={stat}
+    className="text-left py-2 px-1 font-medium w-16"
+    title={stat}
+    style={{ color: themeColors.muted }}
+  >
+    {stat.length > 6 ? stat.slice(0, 6) + '..' : stat}
+  </th>
+)
+
+interface StatCellProps {
+  value: SampleValue
+}
+
+const StatCell = ({ value }: StatCellProps) => (
+  <td
+    className="py-2 px-1 font-mono text-xs truncate"
+    title={String(value)}
+    style={{ color: themeColors.muted }}
+  >
+    {typeof value === 'number'
+      ? value.toFixed(1)
+      : String(value).length > 8
+        ? String(value).slice(0, 8) + '..'
+        : String(value)}
+  </td>
+)
+
+interface ColumnStatRowProps {
+  columnName: string
+  statsValue: TableDiffData['row_diff']['column_stats'][string]
+}
+
+const ColumnStatRow = ({ columnName, statsValue }: ColumnStatRowProps) => (
+  <tr
+    className="transition-colors"
+    style={{
+      borderBottom: `1px solid ${themeColors.border}`,
+    }}
+    onMouseEnter={e => {
+      e.currentTarget.style.backgroundColor =
+        'var(--vscode-list-hoverBackground)'
+    }}
+    onMouseLeave={e => {
+      e.currentTarget.style.backgroundColor = 'transparent'
+    }}
+  >
+    <td
+      className="py-2 pr-2 font-mono truncate"
+      title={columnName}
+    >
+      {columnName}
+    </td>
+    {statsValue && typeof statsValue === 'object'
+      ? Object.values(statsValue as Record<string, SampleValue>).map((value, idx) => (
+          <StatCell key={idx} value={value} />
+        ))
+      : [<StatCell key="single-value" value={statsValue} />]}
+  </tr>
+)
+
 export function ColumnStatsSection({
   columnStats,
   expanded,
@@ -57,69 +123,17 @@ export function ColumnStatsSection({
                   Column
                 </th>
                 {statKeys.map(stat => (
-                  <th
-                    key={stat}
-                    className="text-left py-2 px-1 font-medium w-16"
-                    title={stat}
-                    style={{ color: themeColors.muted }}
-                  >
-                    {stat.length > 6 ? stat.slice(0, 6) + '..' : stat}
-                  </th>
+                  <StatHeader key={stat} stat={stat} />
                 ))}
               </tr>
             </thead>
             <tbody>
               {Object.entries(columnStats).map(([col, statsValue]) => (
-                <tr
+                <ColumnStatRow
                   key={col}
-                  className="transition-colors"
-                  style={{
-                    borderBottom: `1px solid ${themeColors.border}`,
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor =
-                      'var(--vscode-list-hoverBackground)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }}
-                >
-                  <td
-                    className="py-2 pr-2 font-mono truncate"
-                    title={col}
-                  >
-                    {col}
-                  </td>
-                  {statsValue && typeof statsValue === 'object'
-                    ? Object.values(
-                        statsValue as Record<string, SampleValue>,
-                      ).map((value: SampleValue, idx: number) => (
-                        <td
-                          key={idx}
-                          className="py-2 px-1 font-mono text-xs truncate"
-                          title={String(value)}
-                          style={{ color: themeColors.muted }}
-                        >
-                          {typeof value === 'number'
-                            ? value.toFixed(1)
-                            : String(value).length > 8
-                              ? String(value).slice(0, 8) + '..'
-                              : String(value)}
-                        </td>
-                      ))
-                    : [
-                        <td
-                          key="single-value"
-                          className="py-2 px-1 font-mono text-xs truncate"
-                          title={String(statsValue)}
-                          style={{ color: themeColors.muted }}
-                        >
-                          {typeof statsValue === 'number'
-                            ? statsValue.toFixed(1)
-                            : String(statsValue)}
-                        </td>,
-                      ]}
-                </tr>
+                  columnName={col}
+                  statsValue={statsValue}
+                />
               ))}
             </tbody>
           </table>
