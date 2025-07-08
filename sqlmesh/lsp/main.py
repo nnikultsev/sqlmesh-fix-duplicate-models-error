@@ -15,7 +15,6 @@ from lsprotocol.types import (
 from pygls.server import LanguageServer
 from sqlmesh._version import __version__
 from sqlmesh.core.context import Context
-from sqlmesh.core import constants as c
 from sqlmesh.utils.date import to_timestamp
 from sqlmesh.lsp.api import (
     API_FEATURE,
@@ -214,9 +213,7 @@ class SQLMeshLanguageServer:
                 default_target_environment="",
             )
 
-    def _custom_get_models(
-        self, ls: LanguageServer, params: GetModelsRequest
-    ) -> GetModelsResponse:
+    def _custom_get_models(self, ls: LanguageServer, params: GetModelsRequest) -> GetModelsResponse:
         """Get all models available for table diff."""
         try:
             context = self._context_get_or_load()

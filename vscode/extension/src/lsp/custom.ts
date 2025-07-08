@@ -46,7 +46,6 @@ interface AllModelsResponse extends BaseResponse {
   keywords: string[]
 }
 
-
 export interface AbstractAPICallRequest {
   endpoint: string
   method: string
