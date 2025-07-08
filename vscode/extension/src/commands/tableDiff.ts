@@ -4,6 +4,12 @@ import { isErr } from '@bus/result'
 import { CallbackEvent, RPCRequest } from '@bus/callbacks'
 import { getWorkspaceFolders } from '../utilities/common/vscodeapi'
 
+interface ModelInfo {
+  name: string
+  fqn: string
+  description?: string | null
+}
+
 export function showTableDiff(
   lspClient?: LSPClient,
   extensionUri?: vscode.Uri,
@@ -21,7 +27,7 @@ export function showTableDiff(
 
     // Get the current active editor
     const activeEditor = vscode.window.activeTextEditor
-    let selectedModelInfo: any = null
+    let selectedModelInfo: ModelInfo | null = null
 
     if (!activeEditor) {
       // No active editor, show a list of all models
@@ -46,8 +52,8 @@ export function showTableDiff(
       }
 
       // Let user choose from all models
-      const items = (allModelsResult.value.models as any[]).map(
-        (model: any) => ({
+      const items = (allModelsResult.value.models as ModelInfo[]).map(
+        (model: ModelInfo) => ({
           label: model.name,
           description: model.fqn,
           detail: model.description ? model.description : undefined,
@@ -116,6 +122,12 @@ export function showTableDiff(
       } else {
         selectedModelInfo = result.value.models[0]
       }
+    }
+
+    // Ensure we have a selected model
+    if (!selectedModelInfo) {
+      vscode.window.showErrorMessage('No model selected')
+      return
     }
 
     // Get environments for selection

@@ -1,6 +1,15 @@
 import { useMemo, useState, useEffect, type ReactNode } from 'react'
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
+// Type for data values in samples - can be strings, numbers, booleans, or null
+type SampleValue = string | number | boolean | null
+
+// Type for row data in samples
+type SampleRow = Record<string, SampleValue>
+
+// Type for column statistics
+type ColumnStats = Record<string, number | string | null>
+
 /**
  * Utility — cheap clsx replacement for conditional class composition.
  */
@@ -118,19 +127,19 @@ interface TableDiffData {
     source: string
     target: string
     stats: Record<string, number>
-    sample: Record<string, any>
-    joined_sample: Record<string, any>
-    s_sample: Record<string, any>
-    t_sample: Record<string, any>
-    column_stats: Record<string, any>
+    sample: Record<string, SampleValue[]>
+    joined_sample: Record<string, SampleValue[]>
+    s_sample: Record<string, SampleValue[]>
+    t_sample: Record<string, SampleValue[]>
+    column_stats: ColumnStats
     source_count: number
     target_count: number
     count_pct_change: number
     decimals: number
     processed_sample_data?: {
-      column_differences: Array<Record<string, any>>
-      source_only: Array<Record<string, any>>
-      target_only: Array<Record<string, any>>
+      column_differences: SampleRow[]
+      source_only: SampleRow[]
+      target_only: SampleRow[]
     }
   }
   on: string[][]
@@ -151,7 +160,7 @@ interface ExpandedSections {
 // Helper utilities
 // ---------------------------------------------------------------
 
-const formatCellValue = (cell: any, decimals = 3): string => {
+const formatCellValue = (cell: SampleValue, decimals = 3): string => {
   if (cell == null) return 'null'
   if (typeof cell === 'number')
     return cell % 1 === 0 ? cell.toString() : cell.toFixed(decimals)
@@ -189,7 +198,11 @@ const themeColors = {
 // ---------------------------------------------------------------
 // SampleDataSection
 // ---------------------------------------------------------------
-function SampleDataSection({ rowDiff }: { rowDiff: any }) {
+function SampleDataSection({
+  rowDiff,
+}: {
+  rowDiff: TableDiffData['row_diff']
+}) {
   const { processed_sample_data, decimals = 3 } = rowDiff
 
   // // Debug logging
@@ -220,10 +233,10 @@ function SampleDataSection({ rowDiff }: { rowDiff: any }) {
 
   // Group column differences by column name
   const groupedDifferences = useMemo(() => {
-    const groups: Record<string, Array<Record<string, any>>> = {}
+    const groups: Record<string, SampleRow[]> = {}
 
-    column_differences.forEach((row: Record<string, any>) => {
-      const columnName = row.__column_name__
+    column_differences.forEach((row: SampleRow) => {
+      const columnName = String(row.__column_name__ || 'unknown')
       if (!groups[columnName]) {
         groups[columnName] = []
       }
@@ -301,48 +314,50 @@ function SampleDataSection({ rowDiff }: { rowDiff: any }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {rows.slice(0, 10).map((row: any, rowIdx: number) => (
-                          <tr
-                            key={rowIdx}
-                            className="transition-colors"
-                            style={{
-                              borderBottom: `1px solid ${themeColors.border}`,
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.backgroundColor =
-                                'var(--vscode-list-hoverBackground)'
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.backgroundColor =
-                                'transparent'
-                            }}
-                          >
-                            {Object.entries(row)
-                              .filter(([key]) => !key.startsWith('__'))
-                              .map(([key, cell]) => (
-                                <td
-                                  key={key}
-                                  className="py-2 px-2 font-mono whitespace-nowrap"
-                                  style={{
-                                    color:
-                                      key === sourceName
-                                        ? themeColors.info
-                                        : key === targetName
-                                          ? themeColors.success
-                                          : 'var(--vscode-editor-foreground)',
-                                    backgroundColor:
-                                      key === sourceName
-                                        ? 'var(--vscode-diffEditor-insertedTextBackground, rgba(59, 130, 246, 0.1))'
-                                        : key === targetName
-                                          ? 'var(--vscode-diffEditor-removedTextBackground, rgba(34, 197, 94, 0.1))'
-                                          : 'transparent',
-                                  }}
-                                >
-                                  {formatCellValue(cell, decimals)}
-                                </td>
-                              ))}
-                          </tr>
-                        ))}
+                        {rows
+                          .slice(0, 10)
+                          .map((row: SampleRow, rowIdx: number) => (
+                            <tr
+                              key={rowIdx}
+                              className="transition-colors"
+                              style={{
+                                borderBottom: `1px solid ${themeColors.border}`,
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.backgroundColor =
+                                  'var(--vscode-list-hoverBackground)'
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.backgroundColor =
+                                  'transparent'
+                              }}
+                            >
+                              {Object.entries(row)
+                                .filter(([key]) => !key.startsWith('__'))
+                                .map(([key, cell]) => (
+                                  <td
+                                    key={key}
+                                    className="py-2 px-2 font-mono whitespace-nowrap"
+                                    style={{
+                                      color:
+                                        key === sourceName
+                                          ? themeColors.info
+                                          : key === targetName
+                                            ? themeColors.success
+                                            : 'var(--vscode-editor-foreground)',
+                                      backgroundColor:
+                                        key === sourceName
+                                          ? 'var(--vscode-diffEditor-insertedTextBackground, rgba(59, 130, 246, 0.1))'
+                                          : key === targetName
+                                            ? 'var(--vscode-diffEditor-removedTextBackground, rgba(34, 197, 94, 0.1))'
+                                            : 'transparent',
+                                    }}
+                                  >
+                                    {formatCellValue(cell, decimals)}
+                                  </td>
+                                ))}
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -407,32 +422,34 @@ function SampleDataSection({ rowDiff }: { rowDiff: any }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {source_only.slice(0, 10).map((row: any, rowIdx: number) => (
-                    <tr
-                      key={rowIdx}
-                      className="transition-colors"
-                      style={{
-                        borderBottom: `1px solid ${themeColors.modifiedText}`,
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor =
-                          'var(--vscode-list-hoverBackground)'
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      {Object.values(row).map((cell, cellIdx) => (
-                        <td
-                          key={cellIdx}
-                          className="py-2 px-2 font-mono whitespace-nowrap"
-                          style={{ color: themeColors.modifiedText }}
-                        >
-                          {formatCellValue(cell, decimals)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {source_only
+                    .slice(0, 10)
+                    .map((row: SampleRow, rowIdx: number) => (
+                      <tr
+                        key={rowIdx}
+                        className="transition-colors"
+                        style={{
+                          borderBottom: `1px solid ${themeColors.modifiedText}`,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor =
+                            'var(--vscode-list-hoverBackground)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                      >
+                        {Object.values(row).map((cell, cellIdx) => (
+                          <td
+                            key={cellIdx}
+                            className="py-2 px-2 font-mono whitespace-nowrap"
+                            style={{ color: themeColors.modifiedText }}
+                          >
+                            {formatCellValue(cell, decimals)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -486,32 +503,34 @@ function SampleDataSection({ rowDiff }: { rowDiff: any }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {target_only.slice(0, 10).map((row: any, rowIdx: number) => (
-                    <tr
-                      key={rowIdx}
-                      className="transition-colors"
-                      style={{
-                        borderBottom: `1px solid ${themeColors.addedText}`,
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor =
-                          'var(--vscode-list-hoverBackground)'
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      {Object.values(row).map((cell, cellIdx) => (
-                        <td
-                          key={cellIdx}
-                          className="py-2 px-2 font-mono whitespace-nowrap"
-                          style={{ color: themeColors.addedText }}
-                        >
-                          {formatCellValue(cell, decimals)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {target_only
+                    .slice(0, 10)
+                    .map((row: SampleRow, rowIdx: number) => (
+                      <tr
+                        key={rowIdx}
+                        className="transition-colors"
+                        style={{
+                          borderBottom: `1px solid ${themeColors.addedText}`,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor =
+                            'var(--vscode-list-hoverBackground)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                      >
+                        {Object.values(row).map((cell, cellIdx) => (
+                          <td
+                            key={cellIdx}
+                            className="py-2 px-2 font-mono whitespace-nowrap"
+                            style={{ color: themeColors.addedText }}
+                          >
+                            {formatCellValue(cell, decimals)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -980,7 +999,7 @@ export function TableDiffResults({ data }: Props) {
                   </thead>
                   <tbody>
                     {Object.entries(row_diff.column_stats).map(
-                      ([col, stats]) => (
+                      ([col, statsValue]) => (
                         <tr
                           key={col}
                           className="transition-colors"
@@ -1002,22 +1021,35 @@ export function TableDiffResults({ data }: Props) {
                           >
                             {col}
                           </td>
-                          {Object.values(stats).map(
-                            (value: any, idx: number) => (
-                              <td
-                                key={idx}
-                                className="py-2 px-1 font-mono text-xs truncate"
-                                title={String(value)}
-                                style={{ color: themeColors.muted }}
-                              >
-                                {typeof value === 'number'
-                                  ? value.toFixed(1)
-                                  : String(value).length > 8
-                                    ? String(value).slice(0, 8) + '..'
-                                    : String(value)}
-                              </td>
-                            ),
-                          )}
+                          {statsValue && typeof statsValue === 'object'
+                            ? Object.values(
+                                statsValue as Record<string, SampleValue>,
+                              ).map((value: SampleValue, idx: number) => (
+                                <td
+                                  key={idx}
+                                  className="py-2 px-1 font-mono text-xs truncate"
+                                  title={String(value)}
+                                  style={{ color: themeColors.muted }}
+                                >
+                                  {typeof value === 'number'
+                                    ? value.toFixed(1)
+                                    : String(value).length > 8
+                                      ? String(value).slice(0, 8) + '..'
+                                      : String(value)}
+                                </td>
+                              ))
+                            : [
+                                <td
+                                  key="single-value"
+                                  className="py-2 px-1 font-mono text-xs truncate"
+                                  title={String(statsValue)}
+                                  style={{ color: themeColors.muted }}
+                                >
+                                  {typeof statsValue === 'number'
+                                    ? statsValue.toFixed(1)
+                                    : String(statsValue)}
+                                </td>,
+                              ]}
                         </tr>
                       ),
                     )}

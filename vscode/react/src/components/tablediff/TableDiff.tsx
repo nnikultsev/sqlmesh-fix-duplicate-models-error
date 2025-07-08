@@ -3,6 +3,15 @@ import LoadingStatus from '../loading/LoadingStatus'
 import { TableDiffResults } from './TableDiffResults'
 import { callRpc } from '../../utils/rpc'
 
+// Type for data values in samples - can be strings, numbers, booleans, or null
+type SampleValue = string | number | boolean | null
+
+// Type for row data in samples
+type SampleRow = Record<string, SampleValue>
+
+// Type for column statistics
+type ColumnStats = Record<string, number | string | null>
+
 interface TableDiffData {
   schema_diff: {
     source: string
@@ -17,19 +26,19 @@ interface TableDiffData {
     source: string
     target: string
     stats: Record<string, number>
-    sample: Record<string, any>
-    joined_sample: Record<string, any>
-    s_sample: Record<string, any>
-    t_sample: Record<string, any>
-    column_stats: Record<string, any>
+    sample: Record<string, SampleValue[]>
+    joined_sample: Record<string, SampleValue[]>
+    s_sample: Record<string, SampleValue[]>
+    t_sample: Record<string, SampleValue[]>
+    column_stats: ColumnStats
     source_count: number
     target_count: number
     count_pct_change: number
     decimals: number
     processed_sample_data?: {
-      column_differences: Array<Record<string, any>>
-      source_only: Array<Record<string, any>>
-      target_only: Array<Record<string, any>>
+      column_differences: SampleRow[]
+      source_only: SampleRow[]
+      target_only: SampleRow[]
     }
   }
   on: string[][]
