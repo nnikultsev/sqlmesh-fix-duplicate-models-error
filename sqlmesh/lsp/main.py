@@ -37,6 +37,7 @@ from sqlmesh.lsp.custom import (
     SUPPORTED_METHODS_FEATURE,
     FORMAT_PROJECT_FEATURE,
     GET_ENVIRONMENTS_FEATURE,
+    GET_MODELS_FEATURE,
     AllModelsRequest,
     AllModelsResponse,
     AllModelsForRenderRequest,
@@ -52,6 +53,9 @@ from sqlmesh.lsp.custom import (
     GetEnvironmentsRequest,
     GetEnvironmentsResponse,
     EnvironmentInfo,
+    GetModelsRequest,
+    GetModelsResponse,
+    ModelInfo,
 )
 from sqlmesh.lsp.hints import get_hints
 from sqlmesh.lsp.reference import (
@@ -130,6 +134,7 @@ class SQLMeshLanguageServer:
             SUPPORTED_METHODS_FEATURE: self._custom_supported_methods,
             FORMAT_PROJECT_FEATURE: self._custom_format_project,
             GET_ENVIRONMENTS_FEATURE: self._custom_get_environments,
+            GET_MODELS_FEATURE: self._custom_get_models,
         }
 
         # Register LSP features (e.g., formatting, hover, etc.)
@@ -195,24 +200,6 @@ class SQLMeshLanguageServer:
                     plan_id=env.plan_id or "",
                 )
 
-            # Add prod if not present (mirroring web/server/api/endpoints/environments.py)
-            if c.PROD not in environments:
-                environments[c.PROD] = EnvironmentInfo(
-                    name=c.PROD,
-                    snapshots=[],
-                    start_at=str(to_timestamp(c.EPOCH)),
-                    plan_id="",
-                )
-
-            # Add default target environment if not present
-            if context.context.config.default_target_environment not in environments:
-                environments[context.context.config.default_target_environment] = EnvironmentInfo(
-                    name=context.context.config.default_target_environment,
-                    snapshots=[],
-                    start_at=str(to_timestamp(c.EPOCH)),
-                    plan_id="",
-                )
-
             return GetEnvironmentsResponse(
                 environments=environments,
                 pinned_environments=context.context.config.pinned_environments,
@@ -225,6 +212,30 @@ class SQLMeshLanguageServer:
                 environments={},
                 pinned_environments=set(),
                 default_target_environment="",
+            )
+
+    def _custom_get_models(
+        self, ls: LanguageServer, params: GetModelsRequest
+    ) -> GetModelsResponse:
+        """Get all models available for table diff."""
+        try:
+            context = self._context_get_or_load()
+            models = [
+                ModelInfo(
+                    name=model.name,
+                    fqn=model.fqn,
+                    description=model.description,
+                )
+                for model in context.context.models.values()
+                # Filter for models that are suitable for table diff
+                if model._path is not None  # Has a file path
+            ]
+            return GetModelsResponse(models=models)
+        except Exception as e:
+            ls.log_trace(f"Error getting table diff models: {e}")
+            return GetModelsResponse(
+                response_error=str(e),
+                models=[],
             )
 
     def _custom_api(

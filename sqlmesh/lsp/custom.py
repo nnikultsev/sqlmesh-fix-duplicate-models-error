@@ -175,3 +175,32 @@ class GetEnvironmentsResponse(CustomMethodResponseBaseClass):
     environments: t.Dict[str, EnvironmentInfo]
     pinned_environments: t.Set[str]
     default_target_environment: str
+
+
+GET_MODELS_FEATURE = "sqlmesh/get_models"
+
+
+class GetModelsRequest(CustomMethodRequestBaseClass):
+    """
+    Request to get all models available for table diff.
+    """
+
+    pass
+
+
+class ModelInfo(PydanticModel):
+    """
+    Information about a model for table diff.
+    """
+
+    name: str
+    fqn: str
+    description: t.Optional[str] = None
+
+
+class GetModelsResponse(CustomMethodResponseBaseClass):
+    """
+    Response containing all models available for table diff.
+    """
+
+    models: t.List[ModelInfo]

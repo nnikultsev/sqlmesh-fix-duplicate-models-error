@@ -26,8 +26,8 @@ export function showTableDiff(
     if (!activeEditor) {
       // No active editor, show a list of all models
       const allModelsResult = await lspClient.call_custom_method(
-        'sqlmesh/all_models',
-        { textDocument: { uri: '' } },
+        'sqlmesh/get_models',
+        {},
       )
 
       if (isErr(allModelsResult)) {
@@ -38,22 +38,22 @@ export function showTableDiff(
       }
 
       if (
-        !allModelsResult.value.model_completions ||
-        allModelsResult.value.model_completions.length === 0
+        !allModelsResult.value.models ||
+        allModelsResult.value.models.length === 0
       ) {
         vscode.window.showInformationMessage('No models found in the project')
         return
       }
 
       // Let user choose from all models
-      const items = allModelsResult.value.model_completions.map(
+      const items = (allModelsResult.value.models as any[]).map(
         (model: any) => ({
           label: model.name,
-          description: model.name,
+          description: model.fqn,
           detail: model.description ? model.description : undefined,
           model: {
             name: model.name,
-            fqn: model.name,
+            fqn: model.fqn,
             description: model.description,
           },
         }),
@@ -353,8 +353,8 @@ export function showTableDiff(
               }
               case 'get_all_models': {
                 const allModelsResult = await lspClient.call_custom_method(
-                  'sqlmesh/all_models',
-                  { textDocument: { uri: '' } },
+                  'sqlmesh/get_models',
+                  {},
                 )
 
                 let responseCallback: CallbackEvent
@@ -378,7 +378,7 @@ export function showTableDiff(
                         ok: true,
                         value: {
                           ok: true,
-                          models: allModelsResult.value.model_completions || [],
+                          models: allModelsResult.value.models || [],
                         },
                       },
                     },

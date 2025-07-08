@@ -33,6 +33,7 @@ export type CustomLSPMethods =
   | SupportedMethodsMethod
   | FormatProjectMethod
   | GetEnvironmentsMethod
+  | GetTableDiffModelsMethod
 
 interface AllModelsRequest {
   textDocument: {
@@ -42,20 +43,9 @@ interface AllModelsRequest {
 
 interface AllModelsResponse extends BaseResponse {
   models: string[]
-  model_completions: ModelCompletion[]
   keywords: string[]
-  macros: MacroCompletion[]
 }
 
-interface ModelCompletion {
-  name: string
-  description?: string
-}
-
-interface MacroCompletion {
-  name: string
-  description?: string
-}
 
 export interface AbstractAPICallRequest {
   endpoint: string
@@ -145,4 +135,23 @@ interface EnvironmentInfo {
   snapshots: string[]
   start_at: string
   plan_id: string
+}
+
+export interface GetTableDiffModelsMethod {
+  method: 'sqlmesh/get_models'
+  request: GetModelsRequest
+  response: GetModelsResponse
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface GetModelsRequest {}
+
+interface GetModelsResponse extends BaseResponse {
+  models: ModelInfo[]
+}
+
+interface ModelInfo {
+  name: string
+  fqn: string
+  description: string | null | undefined
 }
