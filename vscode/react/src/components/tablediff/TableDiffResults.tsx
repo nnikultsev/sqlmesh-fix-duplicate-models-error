@@ -38,7 +38,7 @@ export function TableDiffResults({ data }: Props) {
     }))
   }
 
-  const formatPercentage = (v: number) => `${(v).toFixed(1)}%`
+  const formatPercentage = (v: number) => `${v.toFixed(1)}%`
   const formatCount = (v: number) => v.toLocaleString()
 
   return (
@@ -72,10 +72,7 @@ export function TableDiffResults({ data }: Props) {
             {schema_diff.source}
           </code>
           <span
-            className={twMerge(
-              'text-sm font-medium ml-4',
-              twColors.textTarget,
-            )}
+            className={twMerge('text-sm font-medium ml-4', twColors.textTarget)}
           >
             Target:
           </span>
@@ -148,13 +145,6 @@ export function TableDiffResults({ data }: Props) {
           <SectionToggle
             id="sampleData"
             title="Sample Data"
-            badge={`${(row_diff.processed_sample_data.column_differences?.length || 0) + (row_diff.processed_sample_data.source_only?.length || 0) + (row_diff.processed_sample_data.target_only?.length || 0)} rows`}
-            badgeClassName={twMerge(
-              'px-2 py-1 text-xs rounded border',
-              twColors.bgInput,
-              twColors.textAccent,
-              'border-[var(--vscode-textLink-foreground)]',
-            )}
             expanded={expanded.sampleData}
             onToggle={() => toggle('sampleData')}
           >

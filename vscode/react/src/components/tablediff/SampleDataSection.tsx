@@ -255,8 +255,8 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
     <div className="px-8 py-3 space-y-6">
       {/* COMMON ROWS diff */}
       <div>
-        <h4 className={twMerge('text-sm font-medium mb-3', twColors.textClass)}>
-          COMMON ROWS Data Differences:
+        <h4 className={twMerge('text-sm font-medium mb-3', twColors.textInfo)}>
+          Common Rows Data Differences:
         </h4>
         {Object.keys(groupedDifferences).length > 0 ? (
           <div className="space-y-4">
@@ -285,7 +285,7 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
               twColors.textWarning,
             )}
           >
-            SOURCE ONLY Rows:
+            Source Only Rows:
           </h4>
           <div
             className={twMerge(
@@ -343,7 +343,7 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
               twColors.textSuccess,
             )}
           >
-            TARGET ONLY Rows:
+            Target Only Rows:
           </h4>
           <div
             className={twMerge(

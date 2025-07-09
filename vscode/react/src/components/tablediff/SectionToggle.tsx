@@ -6,9 +6,6 @@ import { twColors, twMerge } from './tailwind-utils'
 interface SectionToggleProps {
   id: keyof ExpandedSections
   title: string
-  badge?: string
-  badgeStyle?: React.CSSProperties
-  badgeClassName?: string
   expanded: boolean
   onToggle(): void
   children: ReactNode
@@ -16,9 +13,6 @@ interface SectionToggleProps {
 
 export function SectionToggle({
   title,
-  badge,
-  badgeStyle,
-  badgeClassName,
   expanded,
   onToggle,
   children,
@@ -39,16 +33,6 @@ export function SectionToggle({
           <ChevronRightIcon className="w-4 h-4 mr-2 shrink-0 transition-transform" />
         )}
         <span className="font-medium flex-1">{title}</span>
-        {badge && (
-          <span
-            className={
-              badgeClassName || 'text-xs px-2 py-0.5 rounded ml-2 border'
-            }
-            style={badgeStyle}
-          >
-            {badge}
-          </span>
-        )}
       </button>
       <div
         className={twMerge(

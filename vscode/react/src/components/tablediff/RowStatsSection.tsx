@@ -28,13 +28,6 @@ export function RowStatsSection({
     <SectionToggle
       id="rows"
       title="Row Statistics"
-      badge={`${formatPercentage(fullMatchPct)} match rate`}
-      badgeClassName={twMerge(
-        'px-2 py-1 text-xs rounded border',
-        twColors.bgInput,
-        twColors.textInfo,
-        twColors.borderInfo,
-      )}
       expanded={expanded}
       onToggle={onToggle}
     >

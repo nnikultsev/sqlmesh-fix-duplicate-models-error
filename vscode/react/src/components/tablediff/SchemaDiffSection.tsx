@@ -84,30 +84,10 @@ export function SchemaDiffSection({
     )
   }, [schemaDiff])
 
-  const totalChanges =
-    Object.keys(schemaDiff.added).length +
-    Object.keys(schemaDiff.removed).length +
-    Object.keys(schemaDiff.modified).length
-
   return (
     <SectionToggle
       id="schema"
       title="Schema Changes"
-      badge={schemaHasChanges ? `${totalChanges} changes` : 'No changes'}
-      badgeClassName={twMerge(
-        'px-2 py-1 text-xs rounded border',
-        schemaHasChanges
-          ? twColors.bgModified +
-              ' ' +
-              twColors.textModified +
-              ' ' +
-              twColors.borderModified
-          : twColors.bgAdded +
-              ' ' +
-              twColors.textAdded +
-              ' ' +
-              twColors.borderAdded,
-      )}
       expanded={expanded}
       onToggle={onToggle}
     >

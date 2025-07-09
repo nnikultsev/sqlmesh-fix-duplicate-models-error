@@ -102,13 +102,6 @@ export function ColumnStatsSection({
     <SectionToggle
       id="columnStats"
       title="Column Statistics"
-      badge={`${Object.keys(columnStats).length} columns`}
-      badgeClassName={twMerge(
-        'px-2 py-1 text-xs rounded border',
-        twColors.bgInput,
-        'text-[var(--vscode-symbolIcon-classForeground,#9b59b6)]',
-        'border-[var(--vscode-symbolIcon-classForeground,#9b59b6)]',
-      )}
       expanded={expanded}
       onToggle={onToggle}
     >
