@@ -195,16 +195,27 @@ export function showTableDiff(
     }
 
     // Run table diff immediately with selected parameters
-    const tableDiffResult = await lspClient.call_custom_method('sqlmesh/api', {
-      method: 'GET',
-      endpoint: '/api/table_diff',
-      params: {
-        source: selectedSourceEnv.label,
-        target: selectedTargetEnv.label,
-        model_or_snapshot: selectedModelInfo.name,
+    const tableDiffResult = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'SQLMesh',
+        cancellable: false,
       },
-      body: {},
-    })
+      async (progress) => {
+        progress.report({ message: 'Calculating table differences...' })
+        
+        return await lspClient.call_custom_method('sqlmesh/api', {
+          method: 'GET',
+          endpoint: '/api/table_diff',
+          params: {
+            source: selectedSourceEnv.label,
+            target: selectedTargetEnv.label,
+            model_or_snapshot: selectedModelInfo.name,
+          },
+          body: {},
+        })
+      }
+    )
 
     if (isErr(tableDiffResult)) {
       vscode.window.showErrorMessage(
@@ -460,18 +471,29 @@ export function showTableDiff(
                   break
                 }
 
-                const tableDiffResult = await lspClient.call_custom_method(
-                  'sqlmesh/api',
+                const tableDiffResult = await vscode.window.withProgress(
                   {
-                    method: 'GET',
-                    endpoint: '/api/table_diff',
-                    params: {
-                      source: sourceEnvironment,
-                      target: targetEnvironment,
-                      model_or_snapshot: sourceModel,
-                    },
-                    body: {},
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'SQLMesh',
+                    cancellable: false,
                   },
+                  async (progress) => {
+                    progress.report({ message: 'Calculating table differences...' })
+                    
+                    return await lspClient.call_custom_method(
+                      'sqlmesh/api',
+                      {
+                        method: 'GET',
+                        endpoint: '/api/table_diff',
+                        params: {
+                          source: sourceEnvironment,
+                          target: targetEnvironment,
+                          model_or_snapshot: sourceModel,
+                        },
+                        body: {},
+                      },
+                    )
+                  }
                 )
 
                 let responseCallback: CallbackEvent
