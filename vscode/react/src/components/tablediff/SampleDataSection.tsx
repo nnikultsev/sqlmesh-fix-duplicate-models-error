@@ -29,8 +29,8 @@ const TableHeaderCell = ({
     <th
       className={twMerge(
         'text-left py-2 px-2 font-medium whitespace-nowrap',
-        isSource && twColors.textInfo,
-        isTarget && twColors.textSuccess,
+        isSource && twColors.textSource,
+        isTarget && twColors.textTarget,
         !isSource && !isTarget && twColors.textMuted,
       )}
     >
@@ -61,8 +61,8 @@ const DiffTableCell = ({
     <td
       className={twMerge(
         'py-2 px-2 font-mono whitespace-nowrap',
-        isSource && twColors.textInfo + ' bg-blue-500/10',
-        isTarget && twColors.textSuccess + ' bg-green-500/10',
+        isSource && twColors.textSource + ' bg-blue-500/10',
+        isTarget && twColors.textTarget + ' bg-green-500/10',
         !isSource && !isTarget && twColors.textForeground,
       )}
     >
@@ -255,7 +255,7 @@ export function SampleDataSection({ rowDiff }: SampleDataSectionProps) {
     <div className="px-8 py-3 space-y-6">
       {/* COMMON ROWS diff */}
       <div>
-        <h4 className={twMerge('text-sm font-medium mb-3', twColors.textInfo)}>
+        <h4 className={twMerge('text-sm font-medium mb-3', twColors.textClass)}>
           COMMON ROWS Data Differences:
         </h4>
         {Object.keys(groupedDifferences).length > 0 ? (

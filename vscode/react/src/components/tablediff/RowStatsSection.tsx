@@ -46,7 +46,7 @@ export function RowStatsSection({
               <span className="font-medium">{formatCount(fullMatchCount)}</span>
             </div>
             <div className="flex justify-between">
-              <span className={twColors.textInfo}>~ Partial Matches</span>
+              <span className={twColors.textClass}>~ Partial Matches</span>
               <span className="font-medium">
                 {formatCount(partialMatchCount)}
               </span>
@@ -54,11 +54,11 @@ export function RowStatsSection({
           </div>
           <div className="space-y-1">
             <div className="flex justify-between">
-              <span className={twColors.textWarning}>+ Source Only</span>
+              <span className={twColors.textSource}>+ Source Only</span>
               <span className="font-medium">{formatCount(sOnlyCount)}</span>
             </div>
             <div className="flex justify-between">
-              <span className={twColors.textError}>- Target Only</span>
+              <span className={twColors.textTarget}>- Target Only</span>
               <span className="font-medium">{formatCount(tOnlyCount)}</span>
             </div>
           </div>

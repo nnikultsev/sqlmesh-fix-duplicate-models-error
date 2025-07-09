@@ -12,6 +12,17 @@ export const twColors = {
   textRemoved: 'text-[var(--vscode-diffEditor-removedTextForeground)]',
   textModified: 'text-[var(--vscode-diffEditor-modifiedTextForeground)]',
 
+  // Source and target environment colors
+  textSource: 'text-[var(--vscode-debugIcon-continueForeground)]',
+  textTarget: 'text-[var(--vscode-debugIcon-startForeground)]',
+  textClass: 'text-[var(--vscode-symbolIcon-classForeground)]',
+  bgSource: 'bg-[var(--vscode-debugIcon-continueForeground)]',
+  bgTarget: 'bg-[var(--vscode-debugIcon-startForeground)]',
+  bgClass: 'bg-[var(--vscode-symbolIcon-classForeground)]',
+  borderSource: 'border-[var(--vscode-debugIcon-continueForeground)]',
+  borderTarget: 'border-[var(--vscode-debugIcon-startForeground)]',
+  borderClass: 'border-[var(--vscode-symbolIcon-classForeground)]',
+
   // Background colors
   bgEditor: 'bg-[var(--vscode-editor-background)]',
   bgInput: 'bg-[var(--vscode-input-background)]',

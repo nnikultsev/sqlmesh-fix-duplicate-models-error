@@ -38,7 +38,7 @@ export function TableDiffResults({ data }: Props) {
     }))
   }
 
-  const formatPercentage = (v: number) => `${(v * 100).toFixed(1)}%`
+  const formatPercentage = (v: number) => `${(v).toFixed(1)}%`
   const formatCount = (v: number) => v.toLocaleString()
 
   return (
@@ -58,13 +58,13 @@ export function TableDiffResults({ data }: Props) {
         )}
       >
         <div className="flex items-center gap-3 flex-wrap">
-          <span className={twMerge('text-sm font-medium', twColors.textInfo)}>
+          <span className={twMerge('text-sm font-medium', twColors.textSource)}>
             Source:
           </span>
           <code
             className={twMerge(
               'px-2 py-1 rounded text-sm whitespace-nowrap border',
-              twColors.textInfo,
+              twColors.textSource,
               twColors.bgInput,
               twColors.borderPanel,
             )}
@@ -74,7 +74,7 @@ export function TableDiffResults({ data }: Props) {
           <span
             className={twMerge(
               'text-sm font-medium ml-4',
-              twColors.textSuccess,
+              twColors.textTarget,
             )}
           >
             Target:
@@ -82,7 +82,7 @@ export function TableDiffResults({ data }: Props) {
           <code
             className={twMerge(
               'px-2 py-1 rounded text-sm whitespace-nowrap border',
-              twColors.textSuccess,
+              twColors.textTarget,
               twColors.bgInput,
               twColors.borderPanel,
             )}
@@ -91,13 +91,13 @@ export function TableDiffResults({ data }: Props) {
           </code>
         </div>
         <div className="flex items-center gap-6 text-xs flex-wrap">
-          <span className={twColors.textInfo}>
+          <span className={twColors.textSource}>
             Source rows:{' '}
             <span className="font-medium">
               {formatCount(row_diff.source_count)}
             </span>
           </span>
-          <span className={twColors.textSuccess}>
+          <span className={twColors.textTarget}>
             Target rows:{' '}
             <span className="font-medium">
               {formatCount(row_diff.target_count)}
