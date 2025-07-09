@@ -201,9 +201,9 @@ export function showTableDiff(
         title: 'SQLMesh',
         cancellable: false,
       },
-      async (progress) => {
+      async progress => {
         progress.report({ message: 'Calculating table differences...' })
-        
+
         return await lspClient.call_custom_method('sqlmesh/api', {
           method: 'GET',
           endpoint: '/api/table_diff',
@@ -214,7 +214,7 @@ export function showTableDiff(
           },
           body: {},
         })
-      }
+      },
     )
 
     if (isErr(tableDiffResult)) {
@@ -477,23 +477,22 @@ export function showTableDiff(
                     title: 'SQLMesh',
                     cancellable: false,
                   },
-                  async (progress) => {
-                    progress.report({ message: 'Calculating table differences...' })
-                    
-                    return await lspClient.call_custom_method(
-                      'sqlmesh/api',
-                      {
-                        method: 'GET',
-                        endpoint: '/api/table_diff',
-                        params: {
-                          source: sourceEnvironment,
-                          target: targetEnvironment,
-                          model_or_snapshot: sourceModel,
-                        },
-                        body: {},
+                  async progress => {
+                    progress.report({
+                      message: 'Calculating table differences...',
+                    })
+
+                    return await lspClient.call_custom_method('sqlmesh/api', {
+                      method: 'GET',
+                      endpoint: '/api/table_diff',
+                      params: {
+                        source: sourceEnvironment,
+                        target: targetEnvironment,
+                        model_or_snapshot: sourceModel,
                       },
-                    )
-                  }
+                      body: {},
+                    })
+                  },
                 )
 
                 let responseCallback: CallbackEvent
