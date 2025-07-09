@@ -2,43 +2,34 @@
 export const twColors = {
   // Text colors
   textForeground: 'text-[var(--vscode-editor-foreground)]',
-  textInfo: 'text-[var(--vscode-testing-iconUnset,#3b82f6)]',
-  textSuccess: 'text-[var(--vscode-testing-iconPassed,#22c55e)]',
-  textError: 'text-[var(--vscode-testing-iconFailed,#ef4444)]',
-  textWarning: 'text-[var(--vscode-testing-iconQueued,#f59e0b)]',
+  textInfo: 'text-[var(--vscode-testing-iconUnset)]',
+  textSuccess: 'text-[var(--vscode-testing-iconPassed)]',
+  textError: 'text-[var(--vscode-testing-iconFailed)]',
+  textWarning: 'text-[var(--vscode-testing-iconQueued)]',
   textMuted: 'text-[var(--vscode-descriptionForeground)]',
   textAccent: 'text-[var(--vscode-textLink-foreground)]',
-  textAdded: 'text-[var(--vscode-diffEditor-insertedTextForeground,#22c55e)]',
-  textRemoved: 'text-[var(--vscode-diffEditor-removedTextForeground,#ef4444)]',
-  textModified:
-    'text-[var(--vscode-diffEditor-modifiedTextForeground,#f59e0b)]',
+  textAdded: 'text-[var(--vscode-diffEditor-insertedTextForeground)]',
+  textRemoved: 'text-[var(--vscode-diffEditor-removedTextForeground)]',
+  textModified: 'text-[var(--vscode-diffEditor-modifiedTextForeground)]',
 
   // Background colors
   bgEditor: 'bg-[var(--vscode-editor-background)]',
   bgInput: 'bg-[var(--vscode-input-background)]',
   bgHover: 'hover:bg-[var(--vscode-list-hoverBackground)]',
   bgInactiveSelection: 'bg-[var(--vscode-editor-inactiveSelectionBackground)]',
-  bgAdded:
-    'bg-[var(--vscode-diffEditor-insertedTextBackground,rgba(34,197,94,0.2))]',
-  bgRemoved:
-    'bg-[var(--vscode-diffEditor-removedTextBackground,rgba(239,68,68,0.2))]',
-  bgModified:
-    'bg-[var(--vscode-diffEditor-modifiedTextBackground,rgba(245,158,11,0.2))]',
+  bgAdded: 'bg-[var(--vscode-diffEditor-insertedTextBackground)]',
+  bgRemoved: 'bg-[var(--vscode-diffEditor-removedTextBackground)]',
+  bgModified: 'bg-[var(--vscode-diffEditor-modifiedTextBackground)]',
 
   // Border colors
   borderPanel: 'border-[var(--vscode-panel-border)]',
-  borderInfo: 'border-[var(--vscode-testing-iconUnset,#3b82f6)]',
-  borderSuccess: 'border-[var(--vscode-testing-iconPassed,#22c55e)]',
-  borderError:
-    'border-[var(--vscode-diffEditor-removedTextForeground,#ef4444)]',
-  borderWarning:
-    'border-[var(--vscode-diffEditor-modifiedTextForeground,#f59e0b)]',
-  borderAdded:
-    'border-[var(--vscode-diffEditor-insertedTextForeground,#22c55e)]',
-  borderRemoved:
-    'border-[var(--vscode-diffEditor-removedTextForeground,#ef4444)]',
-  borderModified:
-    'border-[var(--vscode-diffEditor-modifiedTextForeground,#f59e0b)]',
+  borderInfo: 'border-[var(--vscode-testing-iconUnset)]',
+  borderSuccess: 'border-[var(--vscode-testing-iconPassed)]',
+  borderError: 'border-[var(--vscode-diffEditor-removedTextForeground)]',
+  borderWarning: 'border-[var(--vscode-diffEditor-modifiedTextForeground)]',
+  borderAdded: 'border-[var(--vscode-diffEditor-insertedTextForeground)]',
+  borderRemoved: 'border-[var(--vscode-diffEditor-removedTextForeground)]',
+  borderModified: 'border-[var(--vscode-diffEditor-modifiedTextForeground)]',
 }
 
 // Helper function to combine conditional classes
