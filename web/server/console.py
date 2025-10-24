@@ -3,15 +3,16 @@ from __future__ import annotations
 import asyncio
 import json
 import typing as t
-import unittest
 from fastapi.encoders import jsonable_encoder
 from sse_starlette.sse import ServerSentEvent
 from sqlmesh.core.snapshot.definition import Interval, Intervals
 from sqlmesh.core.console import TerminalConsole
 from sqlmesh.core.environment import EnvironmentNamingInfo
 from sqlmesh.core.plan.definition import EvaluatablePlan
-from sqlmesh.core.snapshot import Snapshot, SnapshotInfoLike, SnapshotTableInfo
+from sqlmesh.core.snapshot import Snapshot, SnapshotInfoLike, SnapshotTableInfo, SnapshotId
+from sqlmesh.core.snapshot.execution_tracker import QueryExecutionStats
 from sqlmesh.core.test import ModelTest
+from sqlmesh.core.test.result import ModelTextTestResult
 from sqlmesh.utils.date import now_timestamp
 from web.server import models
 from web.server.exceptions import ApiException
@@ -142,6 +143,8 @@ class ApiConsole(TerminalConsole):
         num_audits_passed: int,
         num_audits_failed: int,
         audit_only: bool = False,
+        execution_stats: t.Optional[QueryExecutionStats] = None,
+        auto_restatement_triggers: t.Optional[t.List[SnapshotId]] = None,
     ) -> None:
         if audit_only:
             return
@@ -258,9 +261,7 @@ class ApiConsole(TerminalConsole):
             )
         )
 
-    def log_test_results(
-        self, result: unittest.result.TestResult, output: t.Optional[str], target_dialect: str
-    ) -> None:
+    def log_test_results(self, result: ModelTextTestResult, target_dialect: str) -> None:
         if result.wasSuccessful():
             self.log_event(
                 event=models.EventName.TESTS,
@@ -279,6 +280,8 @@ class ApiConsole(TerminalConsole):
                         details=details,
                     )
                 )
+
+        output = self._captured_unit_test_results(result)
         self.log_event(
             event=models.EventName.TESTS,
             data=models.ReportTestsFailure(

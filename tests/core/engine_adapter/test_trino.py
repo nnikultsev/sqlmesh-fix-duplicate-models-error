@@ -11,6 +11,7 @@ from sqlmesh.core.engine_adapter import TrinoEngineAdapter
 from sqlmesh.core.model import load_sql_based_model
 from sqlmesh.core.model.definition import SqlModel
 from sqlmesh.core.dialect import schema_
+from sqlmesh.utils.date import to_ds
 from sqlmesh.utils.errors import SQLMeshError
 from tests.core.engine_adapter import to_sql_calls
 
@@ -24,8 +25,8 @@ def trino_mocked_engine_adapter(
     def mock_catalog_type(catalog_name):
         if "iceberg" in catalog_name:
             return "iceberg"
-        if "delta" in catalog_name:
-            return "delta"
+        if "delta_lake" in catalog_name:
+            return "delta_lake"
         return "hive"
 
     mocker.patch(
@@ -50,7 +51,7 @@ def test_set_current_catalog(trino_mocked_engine_adapter: TrinoEngineAdapter):
     ]
 
 
-@pytest.mark.parametrize("storage_type", ["iceberg", "delta"])
+@pytest.mark.parametrize("storage_type", ["iceberg", "delta_lake"])
 def test_get_catalog_type(
     trino_mocked_engine_adapter: TrinoEngineAdapter, mocker: MockerFixture, storage_type: str
 ):
@@ -64,7 +65,7 @@ def test_get_catalog_type(
     assert adapter.get_catalog_type("foo") == TrinoEngineAdapter.DEFAULT_CATALOG_TYPE
     assert adapter.get_catalog_type("datalake_hive") == "hive"
     assert adapter.get_catalog_type("datalake_iceberg") == "iceberg"
-    assert adapter.get_catalog_type("datalake_delta") == "delta"
+    assert adapter.get_catalog_type("datalake_delta_lake") == "delta_lake"
 
     mocker.patch(
         "sqlmesh.core.engine_adapter.trino.TrinoEngineAdapter.get_current_catalog",
@@ -103,7 +104,7 @@ def test_get_catalog_type_cached(
     assert fetchone_mock.call_count == 2
 
 
-@pytest.mark.parametrize("storage_type", ["hive", "delta"])
+@pytest.mark.parametrize("storage_type", ["hive", "delta_lake"])
 def test_partitioned_by_hive_delta(
     trino_mocked_engine_adapter: TrinoEngineAdapter, mocker: MockerFixture, storage_type: str
 ):
@@ -183,7 +184,7 @@ def test_partitioned_by_iceberg_transforms(
 
     adapter.create_table(
         table_name=model.view_name,
-        columns_to_types=model.columns_to_types_or_raise,
+        target_columns_to_types=model.columns_to_types_or_raise,
         partitioned_by=model.partitioned_by,
     )
 
@@ -314,7 +315,7 @@ def test_comments_hive(mocker: MockerFixture, make_mocked_engine_adapter: t.Call
     ]
 
 
-@pytest.mark.parametrize("storage_type", ["iceberg", "delta"])
+@pytest.mark.parametrize("storage_type", ["iceberg", "delta_lake"])
 def test_comments_iceberg_delta(
     mocker: MockerFixture, make_mocked_engine_adapter: t.Callable, storage_type: str
 ):
@@ -426,7 +427,7 @@ def test_table_format(trino_mocked_engine_adapter: TrinoEngineAdapter, mocker: M
 
     adapter.create_table(
         table_name=model.name,
-        columns_to_types=model.columns_to_types_or_raise,
+        target_columns_to_types=model.columns_to_types_or_raise,
         table_format=model.table_format,
         storage_format=model.storage_format,
     )
@@ -434,7 +435,7 @@ def test_table_format(trino_mocked_engine_adapter: TrinoEngineAdapter, mocker: M
     adapter.ctas(
         table_name=model.name,
         query_or_df=t.cast(exp.Query, model.query),
-        columns_to_types=model.columns_to_types_or_raise,
+        target_columns_to_types=model.columns_to_types_or_raise,
         table_format=model.table_format,
         storage_format=model.storage_format,
     )
@@ -472,14 +473,14 @@ def test_table_location(trino_mocked_engine_adapter: TrinoEngineAdapter, mocker:
 
     adapter.create_table(
         table_name=model.name,
-        columns_to_types=model.columns_to_types_or_raise,
+        target_columns_to_types=model.columns_to_types_or_raise,
         table_properties=model.physical_properties,
     )
 
     adapter.ctas(
         table_name=model.name,
         query_or_df=t.cast(exp.Query, model.query),
-        columns_to_types=model.columns_to_types_or_raise,
+        target_columns_to_types=model.columns_to_types_or_raise,
         table_properties=model.physical_properties,
     )
 
@@ -645,4 +646,112 @@ def test_session_authorization(trino_mocked_engine_adapter: TrinoEngineAdapter):
         "SET SESSION AUTHORIZATION 'test_user'",
         "SELECT 1",
         "RESET SESSION AUTHORIZATION",
+    ]
+
+
+@pytest.mark.parametrize(
+    "catalog_name,expected_replace",
+    [
+        ("hive_catalog", False),
+        ("iceberg_catalog", True),
+        ("delta_catalog", False),
+        ("acme_delta_lake", True),
+        ("acme_iceberg", True),
+        ("custom_delta_lake_something", True),
+        ("my_iceberg_store", True),
+        ("plain_catalog", False),
+    ],
+)
+def test_replace_table_catalog_support(
+    trino_mocked_engine_adapter: TrinoEngineAdapter, catalog_name, expected_replace
+):
+    adapter = trino_mocked_engine_adapter
+
+    adapter.replace_query(
+        table_name=".".join([catalog_name, "schema", "test_table"]),
+        query_or_df=t.cast(exp.Query, parse_one("SELECT 1 AS col")),
+    )
+
+    sql_calls = to_sql_calls(adapter)
+    assert len(sql_calls) == 1
+    if expected_replace:
+        assert (
+            sql_calls[0]
+            == f'CREATE OR REPLACE TABLE "{catalog_name}"."schema"."test_table" AS SELECT 1 AS "col"'
+        )
+    else:
+        assert (
+            sql_calls[0]
+            == f'CREATE TABLE IF NOT EXISTS "{catalog_name}"."schema"."test_table" AS SELECT 1 AS "col"'
+        )
+
+
+@pytest.mark.parametrize(
+    "catalog_type_overrides", [{}, {"my_catalog": "hive"}, {"other_catalog": "iceberg"}]
+)
+def test_insert_overwrite_time_partition_hive(
+    make_mocked_engine_adapter: t.Callable, catalog_type_overrides: t.Dict[str, str]
+):
+    config = TrinoConnectionConfig(
+        user="user",
+        host="host",
+        catalog="catalog",
+        catalog_type_overrides=catalog_type_overrides,
+    )
+    adapter: TrinoEngineAdapter = make_mocked_engine_adapter(
+        TrinoEngineAdapter, catalog_type_overrides=config.catalog_type_overrides
+    )
+    adapter.fetchone = MagicMock(return_value=None)  # type: ignore
+
+    adapter.insert_overwrite_by_time_partition(
+        table_name=".".join(["my_catalog", "schema", "test_table"]),
+        query_or_df=t.cast(exp.Query, parse_one("SELECT a, b FROM tbl")),
+        start="2022-01-01",
+        end="2022-01-02",
+        time_column="b",
+        time_formatter=lambda x, _: exp.Literal.string(to_ds(x)),
+        target_columns_to_types={"a": exp.DataType.build("INT"), "b": exp.DataType.build("STRING")},
+    )
+
+    assert to_sql_calls(adapter) == [
+        "SET SESSION my_catalog.insert_existing_partitions_behavior='OVERWRITE'",
+        'INSERT INTO "my_catalog"."schema"."test_table" ("a", "b") SELECT "a", "b" FROM (SELECT "a", "b" FROM "tbl") AS "_subquery" WHERE "b" BETWEEN \'2022-01-01\' AND \'2022-01-02\'',
+        "SET SESSION my_catalog.insert_existing_partitions_behavior='APPEND'",
+    ]
+
+
+@pytest.mark.parametrize(
+    "catalog_type_overrides",
+    [
+        {"my_catalog": "iceberg"},
+        {"my_catalog": "unknown"},
+    ],
+)
+def test_insert_overwrite_time_partition_iceberg(
+    make_mocked_engine_adapter: t.Callable, catalog_type_overrides: t.Dict[str, str]
+):
+    config = TrinoConnectionConfig(
+        user="user",
+        host="host",
+        catalog="catalog",
+        catalog_type_overrides=catalog_type_overrides,
+    )
+    adapter: TrinoEngineAdapter = make_mocked_engine_adapter(
+        TrinoEngineAdapter, catalog_type_overrides=config.catalog_type_overrides
+    )
+    adapter.fetchone = MagicMock(return_value=None)  # type: ignore
+
+    adapter.insert_overwrite_by_time_partition(
+        table_name=".".join(["my_catalog", "schema", "test_table"]),
+        query_or_df=t.cast(exp.Query, parse_one("SELECT a, b FROM tbl")),
+        start="2022-01-01",
+        end="2022-01-02",
+        time_column="b",
+        time_formatter=lambda x, _: exp.Literal.string(to_ds(x)),
+        target_columns_to_types={"a": exp.DataType.build("INT"), "b": exp.DataType.build("STRING")},
+    )
+
+    assert to_sql_calls(adapter) == [
+        'DELETE FROM "my_catalog"."schema"."test_table" WHERE "b" BETWEEN \'2022-01-01\' AND \'2022-01-02\'',
+        'INSERT INTO "my_catalog"."schema"."test_table" ("a", "b") SELECT "a", "b" FROM (SELECT "a", "b" FROM "tbl") AS "_subquery" WHERE "b" BETWEEN \'2022-01-01\' AND \'2022-01-02\'',
     ]

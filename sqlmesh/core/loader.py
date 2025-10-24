@@ -330,6 +330,10 @@ class Loader(abc.ABC):
         def _load(path: Path) -> t.List[Model]:
             try:
                 with open(path, "r", encoding="utf-8") as file:
+                    yaml = YAML().load(file)
+                    # Allow empty YAML files to return an empty list
+                    if yaml is None:
+                        return []
                     return [
                         create_external_model(
                             defaults=self.config.model_defaults.dict(),
@@ -342,10 +346,10 @@ class Loader(abc.ABC):
                                 **row,
                             },
                         )
-                        for row in YAML().load(file.read())
+                        for row in yaml
                     ]
             except Exception as ex:
-                raise ConfigError(self._failed_to_load_model_error(path, ex))
+                raise ConfigError(self._failed_to_load_model_error(path, ex), path)
 
         for path in paths_to_load:
             self._track_file(path)
@@ -359,19 +363,22 @@ class Loader(abc.ABC):
                         raise ConfigError(
                             self._failed_to_load_model_error(
                                 path, f"Duplicate external model name: '{model.name}'."
-                            )
+                            ),
+                            path,
                         )
                     models[model.fqn] = model
 
             # however, if there is a gateway defined, gateway-specific models take precedence
             if gateway:
+                gateway = gateway.lower()
                 for model in external_models:
                     if model.gateway == gateway:
                         if model.fqn in models and models[model.fqn].gateway == gateway:
                             raise ConfigError(
                                 self._failed_to_load_model_error(
                                     path, f"Duplicate external model name: '{model.name}'."
-                                )
+                                ),
+                                path,
                             )
                         models.update({model.fqn: model})
 
@@ -398,13 +405,15 @@ class Loader(abc.ABC):
                     args = [k.strip() for k in line.split("==")]
                     if len(args) != 2:
                         raise ConfigError(
-                            f"Invalid lock file entry '{line.strip()}'. Only 'dep==ver' is supported"
+                            f"Invalid lock file entry '{line.strip()}'. Only 'dep==ver' is supported",
+                            requirements_path,
                         )
                     dep, ver = args
                     other_ver = requirements.get(dep, ver)
                     if ver != other_ver:
                         raise ConfigError(
-                            f"Conflicting requirement {dep}: {ver} != {other_ver}. Fix your {c.REQUIREMENTS} file."
+                            f"Conflicting requirement {dep}: {ver} != {other_ver}. Fix your {c.REQUIREMENTS} file.",
+                            requirements_path,
                         )
                     requirements[dep] = ver
 
@@ -580,7 +589,6 @@ class SqlMeshLoader(Loader):
                 macros=macros,
                 jinja_macros=jinja_macros,
                 audit_definitions=audits,
-                default_audits=self.config.model_defaults.audits,
                 module_path=self.config_path,
                 dialect=self.config.model_defaults.dialect,
                 time_column_format=self.config.time_column_format,
@@ -590,6 +598,7 @@ class SqlMeshLoader(Loader):
                 infer_names=self.config.model_naming.infer_names,
                 signal_definitions=signals,
                 default_catalog_per_gateway=self.context.default_catalog_per_gateway,
+                virtual_environment_mode=self.config.virtual_environment_mode,
             )
 
             with create_process_pool_executor(
@@ -613,13 +622,14 @@ class SqlMeshLoader(Loader):
                                 raise ConfigError(
                                     self._failed_to_load_model_error(
                                         path, f"Duplicate SQL model name: '{model.name}'."
-                                    )
+                                    ),
+                                    path,
                                 )
                             elif model.enabled:
                                 model._path = path
                                 models[model.fqn] = model
                     except Exception as ex:
-                        raise ConfigError(self._failed_to_load_model_error(path, ex))
+                        raise ConfigError(self._failed_to_load_model_error(path, ex), path)
 
         return models
 
@@ -666,12 +676,14 @@ class SqlMeshLoader(Loader):
                             default_catalog=self.context.default_catalog,
                             infer_names=self.config.model_naming.infer_names,
                             audit_definitions=audits,
+                            signal_definitions=signals,
                             default_catalog_per_gateway=self.context.default_catalog_per_gateway,
+                            virtual_environment_mode=self.config.virtual_environment_mode,
                         ):
                             if model.enabled:
                                 models[model.fqn] = model
                 except Exception as ex:
-                    raise ConfigError(self._failed_to_load_model_error(path, ex))
+                    raise ConfigError(self._failed_to_load_model_error(path, ex), path)
 
         finally:
             model_registry._dialect = None
@@ -694,6 +706,8 @@ class SqlMeshLoader(Loader):
     def _load_signals(self) -> UniqueKeyDict[str, signal]:
         """Loads signals for the built-in scheduler."""
 
+        base_signals = signal.get_registry()
+
         signals_max_mtime: t.Optional[float] = None
 
         for path in self._glob_paths(
@@ -713,7 +727,10 @@ class SqlMeshLoader(Loader):
 
         self._signals_max_mtime = signals_max_mtime
 
-        return signal.get_registry()
+        signals = signal.get_registry()
+        signal.set_registry(base_signals)
+
+        return signals
 
     def _load_audits(
         self, macros: MacroRegistry, jinja_macros: JinjaMacroRegistry
@@ -775,7 +792,9 @@ class SqlMeshLoader(Loader):
                         metric = load_metric_ddl(expression, path=path, dialect=dialect)
                         metrics[metric.name] = metric
                 except SqlglotError as ex:
-                    raise ConfigError(f"Failed to parse metric definitions at '{path}': {ex}.")
+                    raise ConfigError(
+                        f"Failed to parse metric definitions at '{path}': {ex}.", path
+                    )
 
         return metrics
 
@@ -801,7 +820,11 @@ class SqlMeshLoader(Loader):
                 path=self.config_path,
             )
 
-            return [EnvironmentStatements(**statements, python_env=python_env)]
+            return [
+                EnvironmentStatements(
+                    **statements, python_env=python_env, project=self.config.project or None
+                )
+            ]
         return []
 
     def _load_linting_rules(self) -> RuleSet:
@@ -880,7 +903,7 @@ class SqlMeshLoader(Loader):
         def __init__(self, loader: SqlMeshLoader, config_path: Path):
             self._loader = loader
             self.config_path = config_path
-            self._model_cache = ModelCache(self.config_path / c.CACHE)
+            self._model_cache = ModelCache(self._loader.context.cache_dir)
 
         def get_or_load_models(
             self, target_path: Path, loader: t.Callable[[], t.List[Model]]

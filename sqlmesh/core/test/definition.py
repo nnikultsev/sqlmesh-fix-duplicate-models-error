@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import datetime
 import threading
 import typing as t
@@ -9,6 +11,7 @@ from contextlib import nullcontext, contextmanager, AbstractContextManager
 from itertools import chain
 from pathlib import Path
 from unittest.mock import patch
+
 
 from io import StringIO
 from sqlglot import Dialect, exp
@@ -24,6 +27,8 @@ from sqlmesh.utils import UniqueKeyDict, random_id, type_is_known, yaml
 from sqlmesh.utils.date import date_dict, pandas_timestamp_to_pydatetime, to_datetime
 from sqlmesh.utils.errors import ConfigError, TestError
 from sqlmesh.utils.yaml import load as yaml_load
+from sqlmesh.utils import Verbosity
+from sqlmesh.utils.rich import df_to_table
 
 if t.TYPE_CHECKING:
     import pandas as pd
@@ -60,6 +65,7 @@ class ModelTest(unittest.TestCase):
         preserve_fixtures: bool = False,
         default_catalog: str | None = None,
         concurrency: bool = False,
+        verbosity: Verbosity = Verbosity.DEFAULT,
     ) -> None:
         """ModelTest encapsulates a unit test for a model.
 
@@ -83,6 +89,7 @@ class ModelTest(unittest.TestCase):
         self.default_catalog = default_catalog
         self.dialect = dialect
         self.concurrency = concurrency
+        self.verbosity = verbosity
 
         self._fixture_table_cache: t.Dict[str, exp.Table] = {}
         self._normalized_column_name_cache: t.Dict[str, str] = {}
@@ -93,8 +100,11 @@ class ModelTest(unittest.TestCase):
         self._validate_and_normalize_test()
 
         if self.engine_adapter.default_catalog:
-            self._fixture_catalog: t.Optional[exp.Identifier] = exp.parse_identifier(
-                self.engine_adapter.default_catalog, dialect=self._test_adapter_dialect
+            self._fixture_catalog: t.Optional[exp.Identifier] = normalize_identifiers(
+                exp.parse_identifier(
+                    self.engine_adapter.default_catalog, dialect=self._test_adapter_dialect
+                ),
+                dialect=self._test_adapter_dialect,
             )
         else:
             self._fixture_catalog = None
@@ -134,11 +144,19 @@ class ModelTest(unittest.TestCase):
 
         super().__init__()
 
+    def defaultTestResult(self) -> unittest.TestResult:
+        from sqlmesh.core.test.result import ModelTextTestResult
+
+        return ModelTextTestResult(stream=sys.stdout, descriptions=True, verbosity=self.verbosity)
+
     def shortDescription(self) -> t.Optional[str]:
         return self.body.get("description")
 
     def setUp(self) -> None:
         """Load all input tables"""
+        import pandas as pd
+        import numpy as np
+
         self.engine_adapter.create_schema(self._qualified_fixture_schema)
 
         for name, values in self.body.get("inputs", {}).items():
@@ -188,6 +206,10 @@ class ModelTest(unittest.TestCase):
                     }
             else:
                 query_or_df = self._create_df(values, columns=columns_to_known_types)
+
+            # Convert NaN/NaT values to None if DataFrame
+            if isinstance(query_or_df, pd.DataFrame):
+                query_or_df = query_or_df.replace({np.nan: None})
 
             self.engine_adapter.create_view(
                 self._test_fixture_table(name), query_or_df, columns_to_known_types
@@ -258,12 +280,21 @@ class ModelTest(unittest.TestCase):
         actual = actual.replace({np.nan: None})
         expected = expected.replace({np.nan: None})
 
+        # We define this here to avoid a top-level import of numpy and pandas
+        DATETIME_TYPES = (
+            datetime.datetime,
+            datetime.date,
+            datetime.time,
+            np.datetime64,
+            pd.Timestamp,
+        )
+
         def _to_hashable(x: t.Any) -> t.Any:
             if isinstance(x, (list, np.ndarray)):
                 return tuple(_to_hashable(v) for v in x)
             if isinstance(x, dict):
                 return tuple((k, _to_hashable(v)) for k, v in x.items())
-            return str(x) if not isinstance(x, t.Hashable) else x
+            return str(x) if isinstance(x, DATETIME_TYPES) or not isinstance(x, t.Hashable) else x
 
         actual = actual.apply(lambda col: col.map(_to_hashable))
         expected = expected.apply(lambda col: col.map(_to_hashable))
@@ -281,23 +312,62 @@ class ModelTest(unittest.TestCase):
                 check_like=True,  # Ignore column order
             )
         except AssertionError as e:
+            # There are 2 concepts at play here:
+            # 1. The Exception args will contain the error message plus the diff dataframe table stringified
+            #    (backwards compatibility with existing tests, possible to serialize/send over network etc)
+            # 2. Each test will also transform these diff dataframes into Rich tables, which will be the ones that'll
+            #    be surfaced to the user through Console for better UX (versus stringified dataframes)
+            #
+            # This is a bit of a hack, but it's a way to get the best of both worlds.
+            args: t.List[t.Any] = []
+
+            failed_subtest = ""
+
+            if subtest := getattr(self, "_subtest", None):
+                if cte := subtest.params.get("cte"):
+                    failed_subtest = f" (CTE {cte})"
+
             if expected.shape != actual.shape:
                 _raise_if_unexpected_columns(expected.columns, actual.columns)
 
-                error_msg = "Data mismatch (rows are different)"
+                args.append("Data mismatch (rows are different)")
 
                 missing_rows = _row_difference(expected, actual)
                 if not missing_rows.empty:
-                    error_msg += f"\n\nMissing rows:\n\n{missing_rows}"
+                    args[0] += f"\n\nMissing rows:\n\n{missing_rows}"
+                    args.append(df_to_table(f"Missing rows{failed_subtest}", missing_rows))
 
                 unexpected_rows = _row_difference(actual, expected)
-                if not unexpected_rows.empty:
-                    error_msg += f"\n\nUnexpected rows:\n\n{unexpected_rows}"
 
-                e.args = (error_msg,)
+                if not unexpected_rows.empty:
+                    args[0] += f"\n\nUnexpected rows:\n\n{unexpected_rows}"
+                    args.append(df_to_table(f"Unexpected rows{failed_subtest}", unexpected_rows))
+
             else:
                 diff = expected.compare(actual).rename(columns={"self": "exp", "other": "act"})
-                e.args = (f"Data mismatch (exp: expected, act: actual)\n\n{diff}",)
+
+                args.append(f"Data mismatch (exp: expected, act: actual)\n\n{diff}")
+
+                diff.rename(columns={"exp": "Expected", "act": "Actual"}, inplace=True)
+                if self.verbosity == Verbosity.DEFAULT:
+                    args.extend(
+                        df_to_table(f"Data mismatch{failed_subtest}", df)
+                        for df in _split_df_by_column_pairs(diff)
+                    )
+                else:
+                    from pandas import MultiIndex
+
+                    levels = t.cast(MultiIndex, diff.columns).levels[0]
+                    for col in levels:
+                        col_diff = diff[col]
+                        if not col_diff.empty:
+                            table = df_to_table(
+                                f"[bold red]Column '{col}' mismatch{failed_subtest}[/bold red]",
+                                col_diff,
+                            )
+                            args.append(table)
+
+            e.args = (*args,)
 
             raise e
 
@@ -319,6 +389,7 @@ class ModelTest(unittest.TestCase):
         preserve_fixtures: bool = False,
         default_catalog: str | None = None,
         concurrency: bool = False,
+        verbosity: Verbosity = Verbosity.DEFAULT,
     ) -> t.Optional[ModelTest]:
         """Create a SqlModelTest or a PythonModelTest.
 
@@ -364,6 +435,7 @@ class ModelTest(unittest.TestCase):
                 preserve_fixtures,
                 default_catalog,
                 concurrency,
+                verbosity,
             )
         except Exception as e:
             raise TestError(f"Failed to create test {test_name} ({path})\n{str(e)}")
@@ -381,6 +453,9 @@ class ModelTest(unittest.TestCase):
         ctes = outputs.get("ctes")
         query = outputs.get("query")
         partial = outputs.pop("partial", None)
+
+        if ctes is None and query is None:
+            _raise_error("Incomplete test, outputs must contain 'query' or 'ctes'", self.path)
 
         def _normalize_rows(
             values: t.List[Row] | t.Dict,
@@ -572,14 +647,16 @@ class ModelTest(unittest.TestCase):
             return self._execute(query)
 
         rows = values["rows"]
+        columns_str: t.Optional[t.List[str]] = None
         if columns:
+            columns_str = [str(c) for c in columns]
             referenced_columns = list(dict.fromkeys(col for row in rows for col in row))
             _raise_if_unexpected_columns(columns, referenced_columns)
 
             if partial:
-                columns = referenced_columns
+                columns_str = [c for c in columns_str if c in referenced_columns]
 
-        return pd.DataFrame.from_records(rows, columns=columns)
+        return pd.DataFrame.from_records(rows, columns=columns_str)
 
     def _add_missing_columns(
         self, query: exp.Query, all_columns: t.Optional[t.Collection[str]] = None
@@ -683,6 +760,7 @@ class PythonModelTest(ModelTest):
         preserve_fixtures: bool = False,
         default_catalog: str | None = None,
         concurrency: bool = False,
+        verbosity: Verbosity = Verbosity.DEFAULT,
     ) -> None:
         """PythonModelTest encapsulates a unit test for a Python model.
 
@@ -709,6 +787,7 @@ class PythonModelTest(ModelTest):
             preserve_fixtures,
             default_catalog,
             concurrency,
+            verbosity,
         )
 
         self.context = TestExecutionContext(
@@ -737,7 +816,7 @@ class PythonModelTest(ModelTest):
         with self._concurrent_render_context():
             variables = self.body.get("vars", {}).copy()
             time_kwargs = {key: variables.pop(key) for key in TIME_KWARG_KEYS if key in variables}
-            df = next(self.model.render(context=self.context, **time_kwargs, **variables))
+            df = next(self.model.render(context=self.context, variables=variables, **time_kwargs))
 
         assert not isinstance(df, exp.Expression)
         return df if isinstance(df, pd.DataFrame) else df.toPandas()
@@ -846,8 +925,7 @@ def generate_test(
                 cte_output = test._execute(cte_query)
                 ctes[cte.alias] = (
                     pandas_timestamp_to_pydatetime(
-                        cte_output.apply(lambda col: col.map(_normalize_df_value)),
-                        cte_query.named_selects,
+                        df=cte_output.apply(lambda col: col.map(_normalize_df_value)),
                     )
                     .replace({np.nan: None})
                     .to_dict(orient="records")
@@ -942,3 +1020,43 @@ def _normalize_df_value(value: t.Any) -> t.Any:
             return {k: _normalize_df_value(v) for k, v in zip(value["key"], value["value"])}
         return {k: _normalize_df_value(v) for k, v in value.items()}
     return value
+
+
+def _split_df_by_column_pairs(df: pd.DataFrame, pairs_per_chunk: int = 4) -> t.List[pd.DataFrame]:
+    """Split a dataframe into chunks of column pairs.
+
+    Args:
+        df: The dataframe to split
+        pairs_per_chunk: Number of column pairs per chunk (default: 4)
+
+    Returns:
+        List of dataframes, each containing an even number of columns
+    """
+    total_columns = len(df.columns)
+
+    # If we have fewer columns than pairs_per_chunk * 2, return the original df
+    if total_columns <= pairs_per_chunk * 2:
+        return [df]
+
+    # Calculate number of chunks needed to split columns evenly
+    num_chunks = (total_columns + (pairs_per_chunk * 2 - 1)) // (pairs_per_chunk * 2)
+
+    # Calculate columns per chunk to ensure equal distribution
+    # We round down to nearest even number to ensure each chunk has even columns
+    columns_per_chunk = (total_columns // num_chunks) & ~1  # Round down to nearest even number
+    remainder = total_columns - (columns_per_chunk * num_chunks)
+
+    chunks = []
+    start_idx = 0
+
+    # Distribute columns evenly across chunks
+    for i in range(num_chunks):
+        # Add 2 columns to early chunks if there's a remainder
+        # This ensures we always add pairs of columns
+        extra = 2 if i < remainder // 2 else 0
+        end_idx = start_idx + columns_per_chunk + extra
+        chunk = df.iloc[:, start_idx:end_idx]
+        chunks.append(chunk)
+        start_idx = end_idx
+
+    return chunks

@@ -87,34 +87,34 @@ def now_ds() -> str:
     return to_ds(now())
 
 
-def yesterday() -> datetime:
+def yesterday(relative_base: t.Optional[datetime] = None) -> datetime:
     """
     Yesterday utc datetime.
 
     Returns:
         A datetime object with tz utc representing yesterday's date
     """
-    return to_datetime("yesterday")
+    return to_datetime("yesterday", relative_base=relative_base)
 
 
-def yesterday_ds() -> str:
+def yesterday_ds(relative_base: t.Optional[datetime] = None) -> str:
     """
     Yesterday utc ds.
 
     Returns:
         Yesterday's ds string.
     """
-    return to_ds("yesterday")
+    return to_ds("yesterday", relative_base=relative_base)
 
 
-def yesterday_timestamp() -> int:
+def yesterday_timestamp(relative_base: t.Optional[datetime] = None) -> int:
     """
     Yesterday utc timestamp.
 
     Returns:
         UTC epoch millis timestamp of yesterday
     """
-    return to_timestamp(yesterday())
+    return to_timestamp(yesterday(relative_base=relative_base))
 
 
 def to_timestamp(
@@ -253,8 +253,12 @@ def date_dict(
 
     for prefix, time_like in prefixes:
         dt = to_datetime(time_like)
+        dtntz = dt.replace(tzinfo=None)
+
         millis = to_timestamp(time_like)
+
         kwargs[f"{prefix}_dt"] = dt
+        kwargs[f"{prefix}_dtntz"] = dtntz
         kwargs[f"{prefix}_date"] = to_date(dt)
         kwargs[f"{prefix}_ds"] = to_ds(time_like)
         kwargs[f"{prefix}_ts"] = to_ts(dt)
@@ -262,22 +266,23 @@ def date_dict(
         kwargs[f"{prefix}_epoch"] = millis / 1000
         kwargs[f"{prefix}_millis"] = millis
         kwargs[f"{prefix}_hour"] = dt.hour
+
     return kwargs
 
 
-def to_ds(obj: TimeLike) -> str:
+def to_ds(obj: TimeLike, relative_base: t.Optional[datetime] = None) -> str:
     """Converts a TimeLike object into YYYY-MM-DD formatted string."""
-    return to_ts(obj)[0:10]
+    return to_ts(obj, relative_base=relative_base)[0:10]
 
 
-def to_ts(obj: TimeLike) -> str:
+def to_ts(obj: TimeLike, relative_base: t.Optional[datetime] = None) -> str:
     """Converts a TimeLike object into YYYY-MM-DD HH:MM:SS formatted string."""
-    return to_datetime(obj).replace(tzinfo=None).isoformat(sep=" ")
+    return to_datetime(obj, relative_base=relative_base).replace(tzinfo=None).isoformat(sep=" ")
 
 
-def to_tstz(obj: TimeLike) -> str:
+def to_tstz(obj: TimeLike, relative_base: t.Optional[datetime] = None) -> str:
     """Converts a TimeLike object into YYYY-MM-DD HH:MM:SS+00:00 formatted string."""
-    return to_datetime(obj).isoformat(sep=" ")
+    return to_datetime(obj, relative_base=relative_base).isoformat(sep=" ")
 
 
 def is_date(obj: TimeLike) -> bool:
@@ -338,6 +343,13 @@ def make_exclusive(time: TimeLike) -> datetime:
     return dt
 
 
+def make_ts_exclusive(time: TimeLike, dialect: DialectType) -> datetime:
+    ts = to_datetime(time)
+    if dialect == "tsql":
+        return to_utc_timestamp(ts) - pd.Timedelta(1, unit="ns")
+    return ts + timedelta(microseconds=1)
+
+
 def to_utc_timestamp(time: datetime) -> pd.Timestamp:
     import pandas as pd
 
@@ -371,6 +383,16 @@ def is_categorical_relative_expression(expression: str) -> bool:
     if not grain_kwargs:
         return False
     return not any(k in TIME_UNITS for k in grain_kwargs)
+
+
+def is_relative(value: TimeLike) -> bool:
+    """
+    Tests a TimeLike object to see if it is a relative expression, eg '1 week ago' as opposed to an absolute timestamp
+    """
+    if isinstance(value, str):
+        return is_categorical_relative_expression(value)
+
+    return False
 
 
 def to_time_column(
@@ -422,7 +444,7 @@ def to_time_column(
 
 
 def pandas_timestamp_to_pydatetime(
-    df: pd.DataFrame, columns_to_types: t.Optional[t.Dict[str, exp.DataType]]
+    df: pd.DataFrame, columns_to_types: t.Optional[t.Dict[str, exp.DataType]] = None
 ) -> pd.DataFrame:
     import pandas as pd
     from pandas.api.types import is_datetime64_any_dtype  # type: ignore

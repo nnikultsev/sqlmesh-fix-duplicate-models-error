@@ -7,7 +7,8 @@ import typing as t
 from pathlib import Path
 
 SQLMESH = "sqlmesh"
-SQLMESH_PATH = Path.home() / ".sqlmesh"
+SQLMESH_MANAGED = "sqlmesh_managed"
+SQLMESH_PATH = Path(os.getenv("SQLMESH_HOME") or Path.home() / ".sqlmesh")
 
 PROD = "prod"
 """Prod"""
@@ -76,7 +77,9 @@ REQUIREMENTS = "sqlmesh-requirements.lock"
 DEFAULT_SCHEMA = "default"
 
 SQLMESH_VARS = "__sqlmesh__vars__"
+SQLMESH_VARS_METADATA = "__sqlmesh__vars__metadata__"
 SQLMESH_BLUEPRINT_VARS = "__sqlmesh__blueprint__vars__"
+SQLMESH_BLUEPRINT_VARS_METADATA = "__sqlmesh__blueprint__vars__metadata__"
 
 VAR = "var"
 BLUEPRINT_VAR = "blueprint_var"

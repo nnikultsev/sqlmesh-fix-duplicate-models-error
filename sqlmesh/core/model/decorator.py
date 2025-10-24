@@ -8,7 +8,9 @@ import re
 from sqlglot import exp
 from sqlglot.dialects.dialect import DialectType
 
+from sqlmesh.core.config.common import VirtualEnvironmentMode
 from sqlmesh.core.macros import MacroRegistry
+from sqlmesh.core.signal import SignalRegistry
 from sqlmesh.utils.jinja import JinjaMacroRegistry
 from sqlmesh.core import constants as c
 from sqlmesh.core.dialect import MacroFunc, parse_one
@@ -48,23 +50,24 @@ class model(registry_decorator):
         self.kwargs = kwargs
 
         # Make sure that argument values are expressions in order to pass validation in ModelMeta.
-        calls = self.kwargs.pop("audits", [])
-        self.kwargs["audits"] = [
-            (
-                (call, {})
-                if isinstance(call, str)
-                else (
-                    call[0],
-                    {
-                        arg_key: exp.convert(
-                            tuple(arg_value) if isinstance(arg_value, list) else arg_value
-                        )
-                        for arg_key, arg_value in call[1].items()
-                    },
+        for function_call_attribute in ("audits", "signals"):
+            calls = self.kwargs.pop(function_call_attribute, [])
+            self.kwargs[function_call_attribute] = [
+                (
+                    (call, {})
+                    if isinstance(call, str)
+                    else (
+                        call[0],
+                        {
+                            arg_key: exp.convert(
+                                tuple(arg_value) if isinstance(arg_value, list) else arg_value
+                            )
+                            for arg_key, arg_value in call[1].items()
+                        },
+                    )
                 )
-            )
-            for call in calls
-        ]
+                for call in calls
+            ]
 
         if "default_catalog" in kwargs:
             raise ConfigError("`default_catalog` cannot be set on a per-model basis.")
@@ -142,6 +145,7 @@ class model(registry_decorator):
         defaults: t.Optional[t.Dict[str, t.Any]] = None,
         macros: t.Optional[MacroRegistry] = None,
         jinja_macros: t.Optional[JinjaMacroRegistry] = None,
+        signal_definitions: t.Optional[SignalRegistry] = None,
         audit_definitions: t.Optional[t.Dict[str, ModelAudit]] = None,
         dialect: t.Optional[str] = None,
         time_column_format: str = c.DEFAULT_TIME_COLUMN_FORMAT,
@@ -151,6 +155,7 @@ class model(registry_decorator):
         variables: t.Optional[t.Dict[str, t.Any]] = None,
         infer_names: t.Optional[bool] = False,
         blueprint_variables: t.Optional[t.Dict[str, t.Any]] = None,
+        virtual_environment_mode: VirtualEnvironmentMode = VirtualEnvironmentMode.default,
     ) -> Model:
         """Get the model registered by this function."""
         env: t.Dict[str, t.Tuple[t.Any, t.Optional[bool]]] = {}
@@ -223,7 +228,9 @@ class model(registry_decorator):
             "macros": macros,
             "jinja_macros": jinja_macros,
             "audit_definitions": audit_definitions,
+            "signal_definitions": signal_definitions,
             "blueprint_variables": blueprint_variables,
+            "virtual_environment_mode": virtual_environment_mode,
             **rendered_fields,
         }
 

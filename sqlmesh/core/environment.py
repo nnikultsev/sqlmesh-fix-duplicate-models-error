@@ -43,6 +43,10 @@ class EnvironmentNamingInfo(PydanticModel):
     normalize_name: bool = True
     gateway_managed: bool = False
 
+    @property
+    def is_dev(self) -> bool:
+        return self.name.lower() != c.PROD
+
     @field_validator("name", mode="before")
     @classmethod
     def _sanitize_name(cls, v: str) -> str:
@@ -262,6 +266,7 @@ class EnvironmentStatements(PydanticModel):
     after_all: t.List[str]
     python_env: t.Dict[str, Executable]
     jinja_macros: t.Optional[JinjaMacroRegistry] = None
+    project: t.Optional[str] = None
 
     def render_before_all(
         self,
@@ -307,6 +312,7 @@ def execute_environment_statements(
     start: t.Optional[TimeLike] = None,
     end: t.Optional[TimeLike] = None,
     execution_time: t.Optional[TimeLike] = None,
+    selected_models: t.Optional[t.Set[str]] = None,
 ) -> None:
     try:
         rendered_expressions = [
@@ -322,6 +328,7 @@ def execute_environment_statements(
                 execution_time=execution_time,
                 environment_naming_info=environment_naming_info,
                 engine_adapter=adapter,
+                selected_models=selected_models,
             )
         ]
     except Exception as e:
